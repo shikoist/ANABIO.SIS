@@ -200,4 +200,9 @@ Quads and n-gons are not supported
 Materials (.mtl) are not loaded
 Maximum: 512 vertices, 512 triangles
 
+## Contacts
+
+Discord:
+https://discord.com/channels/562256527029960714/1549091150516850729
+
 ## License
