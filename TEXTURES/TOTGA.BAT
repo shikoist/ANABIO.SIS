@@ -1,0 +1,1 @@
+C:\GLIDE243\BIN\DOS\TEXUS.EXE -o .tga %1

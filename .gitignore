@@ -1,0 +1,8 @@
+*.obj
+*.ovl
+*.exe
+*.err
+*.log
+thumbs.db
+desktop.ini
+.vscode/

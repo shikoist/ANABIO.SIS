@@ -1,0 +1,27 @@
+name MAIN.EXE
+
+sys dos4g
+
+file SOUND.OBJ
+file KEYBOARD.OBJ
+file CAMERA.OBJ
+file OBJECT.OBJ
+file MESH.OBJ
+file TIMER.OBJ
+file FILE.OBJ
+file TEXTURE.OBJ
+file TEXT.OBJ
+file PRIMITIV.OBJ
+file MATRIX.OBJ
+file FASTMATH.OBJ
+file MAIN.OBJ
+
+libpath C:\GLIDE243\Lib\Dos\Stack
+library GLIDE2X
+library INIT
+library FXMISC
+
+option NOCASEEXACT
+option MAP
+option STACK=65535
+option VERBOSE
