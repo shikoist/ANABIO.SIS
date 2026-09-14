@@ -122,21 +122,27 @@ Choose a folder on your PC that will serve as the root directory for DOSBox-X.
 
 For example (replace [user_name] with your own):
 
-```C:\Users\[user_name]\DOS```
+```
+C:\Users\[user_name]\DOS
+```
 
 Also in `dosbox-x.conf`:
 
-```[autoexec]
+```
+[autoexec]
 MOUNT c C:\Users\[user_name]\DOS
 C:
 cd C:\PROJECTS\ANABIO.SIS
 REM COMPILE.BAT
-REM MAIN.EXE```
+REM MAIN.EXE
+```
 
 The [cpu] section of dosbox-x.conf also needs editing:
 
-```[cpu]
-cycles = max```
+```
+[cpu]
+cycles = max
+```
 
 Create the following folder structure:
 C:\Users\[user_name]\DOS\PROJECTS
