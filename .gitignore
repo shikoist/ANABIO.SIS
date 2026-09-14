@@ -3,6 +3,8 @@
 *.exe
 *.err
 *.log
+GITHUB.BAT
+86BOX.BAT
 thumbs.db
 desktop.ini
 .vscode/
