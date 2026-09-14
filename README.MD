@@ -120,7 +120,7 @@ Choose a folder on your PC that will serve as the root directory for DOSBox-X.
 
 For example (replace [user_name] with your own):
 
-C:\Users\[user_name]\DOS
+```C:\Users\[user_name]\DOS```
 
 Also in `dosbox-x.conf`:
 
