@@ -109,12 +109,14 @@ Install DOSBox-X.
 
 Recommended settings for 3dfx Voodoo 1 in `dosbox-x.conf`:
 
-```[voodoo]
+```
+[voodoo]
 voodoo_card   = software
 voodoo_maxmem = false
 glide         = false
 lfb           = full_noaux
-splash        = false```
+splash        = false
+```
 
 Choose a folder on your PC that will serve as the root directory for DOSBox-X.
 
