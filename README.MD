@@ -148,11 +148,11 @@ Install Open Watcom 2.0 beta for DOS (default location is C:\WATCOM).
 
 Unpack the Glide SDK 2.43 into a folder named GLIDE243, preserving the original directory structure.
 The resulting directory tree should look like this:
-
+```
 C:\Users\[user_name]\DOS\          (real location on the host)
 
 C:\                                (inside DOSBox-X)
-├── GLIDE243\
+GLIDE243
 │   ├── Src\Sst1\include\          *.h files
 │   └── Lib\Dos\Stack              *.lib files
 ├── PROJECTS\
@@ -162,6 +162,7 @@ C:\                                (inside DOSBox-X)
 │       └── COMPILE.BAT            build batch file
 └── WATCOM\
     └── H\                         *.h files
+```
 
 ## Compilation
 Open a DOS command prompt and run:
