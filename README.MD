@@ -109,12 +109,12 @@ Install DOSBox-X.
 
 Recommended settings for 3dfx Voodoo 1 in `dosbox-x.conf`:
 
-[voodoo]
+```[voodoo]
 voodoo_card   = software
 voodoo_maxmem = false
 glide         = false
 lfb           = full_noaux
-splash        = false
+splash        = false```
 
 Choose a folder on your PC that will serve as the root directory for DOSBox-X.
 
@@ -124,17 +124,17 @@ C:\Users\[user_name]\DOS
 
 Also in `dosbox-x.conf`:
 
-[autoexec]
+```[autoexec]
 MOUNT c C:\Users\[user_name]\DOS
 C:
 cd C:\PROJECTS\ANABIO.SIS
 REM COMPILE.BAT
-REM MAIN.EXE
+REM MAIN.EXE```
 
 The [cpu] section of dosbox-x.conf also needs editing:
 
-[cpu]
-cycles = max
+```[cpu]
+cycles = max```
 
 Create the following folder structure:
 C:\Users\[user_name]\DOS\PROJECTS
