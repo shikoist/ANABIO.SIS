@@ -13,6 +13,7 @@ A game 3D engine for the **3dfx Voodoo 1** graphics accelerator running under **
 - [Building](#building)
 - [Loading Textures](#loading-textures)
 - [Loading Models](#loading-models)
+- [Contacts](#contacts)
 - [License](#license)
 
 ## Features
