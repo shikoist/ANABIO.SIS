@@ -207,3 +207,4 @@ Discord:
 https://discord.com/channels/562256527029960714/1549091150516850729
 
 ## License
+https://creativecommons.org/publicdomain/zero/1.0/deed.en
