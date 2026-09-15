@@ -39,7 +39,7 @@ A game 3D engine for the **3dfx Voodoo 1** graphics accelerator running under **
 | **Language**       | C (32-bit, protected mode)         |
 | **Compiler**       | Open Watcom C/C++ 2.0 beta         |
 | **SDK**            | 3dfx Glide 2.43 (SST-1 / Voodoo1)  |
-| **DOS Extender**   | DOS4GW                             |
+| **DOS Extender**   | DOS32A                             |
 | **Texture format** | .3df (Glide 3DFX)                  |
 | **Model format**   | Wavefront .OBJ                     |
 | **OS**             | MS-DOS 6.22+                       |
