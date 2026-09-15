@@ -96,12 +96,14 @@ The project consists of modular components:
 1. **Open Watcom 2.0 beta** — [GitHub releases](https://github.com/open-watcom/open-watcom-v2/releases)
 2. **Glide SDK 2.43** — header files and libraries for 3dfx Voodoo 1
 3. **MS-DOS 6.22+** or **DOSBox-X**
+4. **DOS32A.EXE** - DOS/32 Advanced DOS Extender, replacing DOS4GW.EXE
 
 ### Download Links
 - [DOSBox-X](https://github.com/joncampbell123/dosbox-x/releases/download/dosbox-x-v2026.03.29/dosbox-x-windows-2026.01.02-setup.exe)
 - [Open Watcom 2.0 beta](https://github.com/open-watcom/open-watcom-v2/releases/download/Current-build/open-watcom-2_0-c-dos.exe)
 - [Glide SDK 2.43 (original)](https://theretroweb.com/uploads/drivers/glide-sdk-243-680a30153ff2c958751668.zip)
 - [Glide SDK 2.43 (repack)](https://disk.yandex.ru/d/xc6e1awOcznfuA)
+- [DOS/32 Advanced DOS Extender](https://github.com/amindlost/dos32a/tree/main/binw/dos32a.exe)
 
 ### Environment Setup
 
