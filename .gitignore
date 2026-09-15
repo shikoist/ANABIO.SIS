@@ -5,6 +5,8 @@
 *.log
 GITHUB.BAT
 86BOX.BAT
+!GITHUB.BAT
+!86BOX.BAT
 thumbs.db
 desktop.ini
 .vscode/

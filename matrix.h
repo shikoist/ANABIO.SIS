@@ -21,21 +21,21 @@ void MatrixTranslation  (float* m, float x, float y, float z);
 void MatrixRotationX    (float* m, float angle_rad);
 void MatrixRotationY    (float* m, float angle_rad);
 void MatrixRotationZ    (float* m, float angle_rad);
-void MatrixEulerRotation     (float* m, float x, float y, float z); // Поворот по Euler
-void MatrixScale        (float* m, float sx, float sy, float sz); // Масштабирование
+void MatrixEulerRotation     (float* m, float x, float y, float z); // Euler rotation
+void MatrixScale        (float* m, float sx, float sy, float sz); // Scaling
 void MatrixProjection  (float* m, float fov_deg, float aspect, float near_clip, float far_clip);
 
-// Камера
+// Camera
 void MatrixLookAt(float* m,
                   float camera_pos_x, float camera_pos_y, float camera_pos_z,
                   float look_at_x,  float look_at_y,  float look_at_z,
-                  float up_direction_x,  float up_direction_y,  float up_direction_z);      // направление "вверх"
+                  float up_direction_x,  float up_direction_y,  float up_direction_z);      // direction "up"
 void MatrixLookAt2(float* m,
                   float eye_x, float eye_y, float eye_z,
                   float at_x,  float at_y,  float at_z,
                   float up_x,  float up_y,  float up_z);
 
-void MatrixPrint        (const float* m); // Вывод матрицы в консоль (для отладки)
+void MatrixPrint        (const float* m); // Output matrix to console (for debugging)
 void ApplyMatrix(GrVertex* v, const float* mat);
 void VertexToScreen(GrVertex* inputVertex, GrVertex* outputVertex);
 void VertexToScreen2(GrVertex* outputVertex);

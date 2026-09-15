@@ -1,4 +1,4 @@
-// FASTMATH.H - заголовочные для математики
+// FASTMATH.H - header for mathematics
 
 #ifndef FASTMATH_H
 #define FASTMATH_H
@@ -6,7 +6,7 @@
 #define LOBYTE(w) ((unsigned char)((unsigned short)(w) & 0xFF))
 #define HIBYTE(w) ((unsigned char)(((unsigned short)(w) >> 8)) & 0xFF)
 
-// Когда ставил 8192, висло на железе
+// When set to 8192, it hung on the hardware
 #define FASTMATH_TABLE_SIZE 4096
 
 #define FASTMATH_MASK (FASTMATH_TABLE_SIZE - 1)
@@ -15,7 +15,7 @@
 #define FASTMATH_HALF_PI    1.570796326794897f
 
 typedef struct {
-    float x, y, z, w;   // кватернион ориентации
+    float x, y, z, w;   // quaternion orientation
 } Quaternion;
 
 extern float _sin_tab[FASTMATH_TABLE_SIZE];
@@ -23,10 +23,10 @@ extern float _tan_tab[FASTMATH_TABLE_SIZE];
 
 void init_fast_math();
 
-// Быстрые функции (принимают радианы)
+// Fast functions (take radians)
 float fast_sin(float rad);
 float fast_cos(float rad);
-//float fast_tan(float rad); // На реальном железе виснет
+// float fast_tan(float rad); // Hangs on real hardware
 
 void quat_identity(Quaternion* q);
 void quat_multiply(Quaternion* out, const Quaternion* a, const Quaternion* b);

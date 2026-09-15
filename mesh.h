@@ -2,7 +2,7 @@
 #ifndef MESH_H
 #define MESH_H
 
-#include "primitiv.h"   // GrVertex, MAX_CUBE_VERTICES, и т.п.
+#include "primitiv.h"   // GrVertex, MAX_CUBE_VERTICES, and so on
 
 extern int triangles_drawn;
 
@@ -23,21 +23,21 @@ typedef struct {
 
 static inline float eval_plane_value(GrVertex v, float* plane);
 int ClipTriangleByPlane(
-    GrVertex* output,                    // массив для выходных треугольников (макс 8*3 вершин)
-    GrVertex* v1,                  // вершина 1
-    GrVertex* v2,                  // вершина 2
-    GrVertex* v3,                  // вершина 3
+    GrVertex* output,                    // array for output triangles (max 8*3 vertices)
+    GrVertex* v1,                  // vertex 1
+    GrVertex* v2,                  // vertex 2
+    GrVertex* v3,                  // vertex 3
     float* plane,                  // [a, b, c, d]
-    int max_output_vertices              // размер выходного буфера (должен быть >= 24)
+    int max_output_vertices              // size of output buffer (must be >= 24)
 );
 void ExtractFrustumPlanes(FrustumPlanes* planes, float* proj_matrix);
 int ClipTriangleByFrustum(
-    GrVertex* output,                    // буфер для выходных треугольников
-    GrVertex* v1,                  // вершина 1
-    GrVertex* v2,                  // вершина 2
-    GrVertex* v3,                  // вершина 3
-    FrustumPlanes* planes,         // плоскости frustum
-    int max_output_vertices              // размер буфера (должен быть >= 24)
+    GrVertex* output,                    // buffer for output triangles
+    GrVertex* v1,                  // vertex 1
+    GrVertex* v2,                  // vertex 2
+    GrVertex* v3,                  // vertex 3
+    FrustumPlanes* planes,         // frustum planes
+    int max_output_vertices              // buffer size (must be >= 24)
 );
 static void CopyVertex3D(GrVertex* dest, GrVertex* src);
 static void InterpolateVertex3D(GrVertex* out, 

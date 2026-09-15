@@ -1,4 +1,4 @@
-// object.h - заголовочный файл: концепция игрового объекта в 3д-мире
+// object.h - header file: concept of an object in 3D world
 
 #ifndef OBJECT_H
 #define OBJECT_H

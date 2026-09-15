@@ -1,4 +1,4 @@
-// object.c - концепция игрового объекта в 3д-мире
+// object.c - the concept of a game object in 3D world
 
 #include "object.h"
 

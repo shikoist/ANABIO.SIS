@@ -8,35 +8,35 @@ int main(void)
     FILE *fp;
     int value = 0;
 
-    /* Пытаемся открыть файл для чтения */
+    /* Trying to open the file for reading */
     fp = fopen(build, "r");
     if (fp != NULL) {
-        /* Если файл существует - читаем число */
+        /* If the file exists - read the number */
         if (fscanf(fp, "%d", &value) != 1) {
-            /* Если прочитать не удалось (пустой файл или не число) - начинаем с 0 */
+            /* If reading failed (empty file or not a number) - start from 0 */
             value = 0;
         }
         fclose(fp);
     } else {
-        /* Файла нет - начнём с 0 */
+        /* If the file does not exist - start from 0 */
         value = 0;
     }
 
-    /* Увеличиваем значение */
+    /* Increase the value */
     value++;
 
-    /* Открываем файл для записи (создаём заново) */
+    /* Open the file for writing (create anew) */
     fp = fopen(build, "w");
     if (fp == NULL) {
         printf("Error: Cannot write to %s\n", build);
         return 1;
     }
 
-    /* Записываем новое значение */
+    /* Write the new value */
     fprintf(fp, "%d\n", value);
     fclose(fp);
 
-    /* Выводим результат на экран */
+    /* Print the result to the screen */
     printf("Build: %d\n", value);
 
     return 0;

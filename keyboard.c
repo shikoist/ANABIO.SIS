@@ -1,4 +1,4 @@
-// keyboard.c - обработка клавы
+// keyboard.c - processing keyboard
 
 #include "keyboard.h"
 
@@ -16,41 +16,41 @@ void __interrupt __far keyboard_handler()
     unsigned char scancode;
     unsigned char index;
 
-    /* Читаем сырой сканкод */
+    /* Reading raw scan codes */
     _asm {
         in  al, 0x60
         mov scancode, al
     }
 
-    /* === Обработка extended prefix (E0) === */
+    /* === Processing extended prefix (E0) === */
     if (scancode == 0xE0) {
         was_extended = 1;
         goto ack;
     }
-    if (scancode == 0xE1) {          /* Pause/Break — игнорируем */
+    if (scancode == 0xE1) {          /* Pause/Break — ignoring */
         was_extended = 0;
         goto ack;
     }
 
-    /* Вычисляем индекс массива (всегда чистый сканкод 0x00-0x7F) */
+    /* Calculating array index (always clean scan code 0x00-0x7F) */
     index = scancode & 0x7F;
 
-    /* Если это extended-клавиша — сбрасываем флаг после обработки */
+    /* If this is an extended key — reset flag after processing */
     if (was_extended) {
         was_extended = 0;
     }
 
     /* Make / Break */
     if (scancode & 0x80) {
-        key_states[index] = 0;   /* отпущена */
-        //key_states_prev[index] = 1;   /* отпущена */
+        key_states[index] = 0;   /* released */
+        // key_states_prev[index] = 1;   /* released */
     } else {
-        key_states[index] = 1;   /* нажата */
-        //key_states_prev[index] = 0;   /* нажата */
+        key_states[index] = 1;   /* pressed */
+        // key_states_prev[index] = 0;   /* pressed */
     }
 
 ack:
-    /* Подтверждаем клавиатуре и отправляем EOI */
+    /* Acknowledging keyboard and sending EOI */
     _asm {
         in  al, 0x61
         mov ah, al

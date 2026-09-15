@@ -1,4 +1,4 @@
-// FASTMATH.C - быстрые математические функции
+// FASTMATH.C - fast math functions
 #include <math.h>
 
 #include "FASTMATH.H"
@@ -7,7 +7,7 @@ float _sin_tab[FASTMATH_TABLE_SIZE];
 float _tan_tab[FASTMATH_TABLE_SIZE];
 const float rad_to_idx = (float)FASTMATH_TABLE_SIZE / FASTMATH_TWO_PI;
 
-// Вызвать один раз в main()
+// Call once in main()
 void init_fast_math()
 {
     int i;
@@ -19,7 +19,7 @@ void init_fast_math()
 }
 
 float fast_sin(float rad) {
-    // Приводим радианы к положительному индексу и используем маску для зацикливания
+    // Convert radians to positive index and use mask for wrapping
     int idx = (int)(rad * rad_to_idx) & FASTMATH_MASK;
     return _sin_tab[idx];
 }
@@ -30,13 +30,13 @@ float fast_cos(float rad) {
     return _sin_tab[idx];
 }
 
-// Не использовать для реального железа - виснет. Лучше tan() из math.h
+// Do not use for real hardware - hangs. Better tan() from math.h
 // float fast_tan(float rad) {
 //     int idx = (int)(rad * rad_to_idx) & FASTMATH_MASK;
 //     return _tan_tab[idx];
 // }
 
-// Кватернионные утилиты
+// Quaternion utilities
 void quat_identity(Quaternion* q) {
     q->x = 0.0f; q->y = 0.0f; q->z = 0.0f; q->w = 1.0f;
 }
@@ -60,7 +60,7 @@ void quat_normalize(Quaternion* q) {
     }
 }
 
-// Поворот вектора v кватернионом q
+// Rotate vector v by quaternion q
 void quat_rotate_vector(float* vx, float* vy, float* vz, const Quaternion* q) {
     // t = 2 * cross(q.xyz, v)
     float tx, ty, tz;
@@ -75,7 +75,7 @@ void quat_rotate_vector(float* vx, float* vy, float* vz, const Quaternion* q) {
     *vz += q->w * tz + (q->x * ty - q->y * tx);
 }
 
-// Создать кватернион из углов Эйлера (в радианах), порядок YXZ
+// Create quaternion from Euler angles (in radians), order YXZ
 void quat_from_euler(Quaternion* q, float pitch, float yaw, float roll) {
     float cy, sy, cp, sp, cr, sr;
     Quaternion qy, qp, qr, temp;
@@ -87,11 +87,11 @@ void quat_from_euler(Quaternion* q, float pitch, float yaw, float roll) {
     cr = fast_cos(roll  * 0.5f);
     sr = fast_sin(roll  * 0.5f);
     
-    // Композиция: сначала yaw, затем pitch, затем roll (порядок важен)
-    // Можно составить за один шаг, но проще перемножить три кватерниона.
-    qy.x = 0.0f; qy.y = sy;   qy.z = 0.0f; qy.w = cy;    // поворот вокруг Y
-    qp.x = sp;   qp.y = 0.0f; qp.z = 0.0f; qp.w = cp;    // вокруг X
-    qr.x = 0.0f; qr.y = 0.0f; qr.z = sr;   qr.w = cr;    // вокруг Z
+    // Composition: yaw first, then pitch, then roll (order matters)
+    // Can compose in one step, but easier to multiply three quaternions.
+    qy.x = 0.0f; qy.y = sy;   qy.z = 0.0f; qy.w = cy;    // around Y
+    qp.x = sp;   qp.y = 0.0f; qp.z = 0.0f; qp.w = cp;    // around X
+    qr.x = 0.0f; qr.y = 0.0f; qr.z = sr;   qr.w = cr;    // around Z
     
     quat_multiply(&temp, &qy, &qp);
     quat_multiply(q, &temp, &qr);

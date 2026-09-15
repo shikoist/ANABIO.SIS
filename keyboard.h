@@ -1,7 +1,7 @@
 #ifndef KEYBOARD_H
 #define KEYBOARD_H
 
-// Буквы (скан-коды IBM PC)
+// Letters (IBM PC scan codes)
 #define KEY_A       0x1E
 #define KEY_B       0x30
 #define KEY_C       0x2E
@@ -29,7 +29,7 @@
 #define KEY_Y       0x15
 #define KEY_Z       0x2C
 
-// Цифры и символы (верхний ряд)
+// Numbers and symbols (top row)
 #define KEY_1       0x02
 #define KEY_2       0x03
 #define KEY_3       0x04
@@ -41,7 +41,7 @@
 #define KEY_9       0x0A
 #define KEY_0       0x0B
 
-// Модификаторы
+// Modifiers
 #define KEY_LCTRL   0x1D
 #define KEY_LALT    0x38
 #define KEY_LSHIFT  0x2A
@@ -50,7 +50,7 @@
 #define KEY_NUM     0x45
 #define KEY_SCROLL  0x46
 
-// Стрелки (обычные, без E0)
+// Arrows (regular, no E0)
 #define KEY_UP      0x48
 #define KEY_DOWN    0x50
 #define KEY_LEFT    0x4B
@@ -63,7 +63,7 @@
 #define KEY_TAB     0x0F
 #define KEY_SPACE   0x39
 
-// Навигация (скан-коды, работают как с основной группой, так и с цифровым блоком при выкл. NumLock)
+// Navigation (scan codes, work with both main group and numeric block with NumLock off)
 #define KEY_HOME      0x47
 #define KEY_END       0x4F
 #define KEY_PAGEUP    0x49
@@ -71,7 +71,7 @@
 #define KEY_INSERT    0x52
 #define KEY_DELETE    0x53
 
-// Функциональные клавиши F1-F12
+// Function keys F1-F12
 #define KEY_F1        0x3B
 #define KEY_F2        0x3C
 #define KEY_F3        0x3D
@@ -82,8 +82,8 @@
 #define KEY_F8        0x42
 #define KEY_F9        0x43
 #define KEY_F10       0x44
-#define KEY_F11       0x57    // Скан-код F11 (0x57)
-#define KEY_F12       0x58    // Скан-код F12 (0x58)
+#define KEY_F11       0x57    // Scan code F11 (0x57)
+#define KEY_F12       0x58    // Scan code F12 (0x58)
 
 extern unsigned char key_states[128];
 extern unsigned char key_states_prev[128];

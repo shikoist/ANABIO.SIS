@@ -1,19 +1,19 @@
-// camera.c - концепция игровой камеры в 3д-мире
+// camera.c - concept of game camera in 3D world
 #include <math.h>
 
 #include "matrix.h"
 #include "fastmath.h"
 #include "camera.h"
 
-// Камера одна и глобальная
+// Camera is one and global
 Camera camera;
 FrustumPlanes frustum;
 
-// Матрица вида тоже одна и тоже глобальная
+// View matrix is also one and global
 float view[16];
 float proj[16];
 
-// Задаём начальные параметры камеры
+// Setting initial camera parameters
 void SetupCamera(
     float pos_x, float pos_y, float pos_z,
     float pitch, float yaw, float roll,
@@ -21,10 +21,10 @@ void SetupCamera(
     float near_clip, float far_clip
 ) {
     
-    // float default_camera_yaw   = 180.0f;  // я так и не понял, почему только при этих
-    // float default_camera_pitch = -4.0f;   // значениях камера смотрит на +Z
-    // camera.yaw   = 180.0f;   // поворот по горизонтали (влево-вправо)
-    // camera.pitch = -4.0f;   // поворот по вертикали (вверх-вниз)
+    // float default_camera_yaw   = 180.0f;  // I still don't understand why only these
+    // float default_camera_pitch = -4.0f;   // values make the camera look at +Z
+    // camera.yaw   = 180.0f;   // horizontal rotation (left-right)
+    // camera.pitch = -4.0f;   // vertical rotation (up-down)
     // camera.translation_speed = 40.0f;
     // camera.rotation_speed = 90.0f;
     camera.pos_x = pos_x;
@@ -44,46 +44,46 @@ void SetupCamera(
         roll  * DEGTORAD);
 }
 
-// Вычисление плоскостей frustum из матрицы проекции
+// Calculating frustum planes from projection matrix
 void ExtractFrustumPlanes(FrustumPlanes* planes, float* proj_matrix) {
     const float* m = proj_matrix;
     int i;
     float far_len;
     
-    // Для Row-Major матрицы, индексы: m[строка * 4 + столбец]
-    // Извлекаем плоскости из матрицы проекции
+    // For row-major matrix, indices: m[行 * 4 + 列]
+    // Extracting planes from projection matrix
     
-    // Near plane: строка 3 + строка 2
+    // Near plane: row 3 + row 2
     planes->near_plane[0] = m[12] + m[8];   // m[3][0] + m[2][0]
     planes->near_plane[1] = m[13] + m[9];   // m[3][1] + m[2][1]
     planes->near_plane[2] = m[14] + m[10];  // m[3][2] + m[2][2]
     planes->near_plane[3] = m[15] + m[11];  // m[3][3] + m[2][3]
     
-    // Far plane: строка 3 - строка 2
+    // Far plane: row 3 - row 2
     planes->far_plane[0] = m[12] - m[8];
     planes->far_plane[1] = m[13] - m[9];
     planes->far_plane[2] = m[14] - m[10];
     planes->far_plane[3] = m[15] - m[11];
 
-    // Left plane: строка 3 + строка 0
+    // Left plane: row 3 + row 0
     planes->left_plane[0] = m[12] + m[0];
     planes->left_plane[1] = m[13] + m[1];
     planes->left_plane[2] = m[14] + m[2];
     planes->left_plane[3] = m[15] + m[3];
     
-    // Right plane: строка 3 - строка 0
+    // Right plane: row 3 - row 0
     planes->right_plane[0] = m[12] - m[0];
     planes->right_plane[1] = m[13] - m[1];
     planes->right_plane[2] = m[14] - m[2];
     planes->right_plane[3] = m[15] - m[3];
     
-    // Bottom plane: строка 3 + строка 1
+    // Bottom plane: row 3 + row 1
     planes->bottom_plane[0] = m[12] + m[4];
     planes->bottom_plane[1] = m[13] + m[5];
     planes->bottom_plane[2] = m[14] + m[6];
     planes->bottom_plane[3] = m[15] + m[7];
     
-    // Top plane: строка 3 - строка 1
+    // Top plane: row 3 - row 1
     planes->top_plane[0] = m[12] - m[4];
     planes->top_plane[1] = m[13] - m[5];
     planes->top_plane[2] = m[14] - m[6];
@@ -91,7 +91,7 @@ void ExtractFrustumPlanes(FrustumPlanes* planes, float* proj_matrix) {
     
 
 
-    // Нормализуем плоскости
+    // Normalizing planes
     for (i = 0; i < 6; i++) {
         float* p = (float*)planes + i * 4;
         float len = sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]);
@@ -102,63 +102,63 @@ void ExtractFrustumPlanes(FrustumPlanes* planes, float* proj_matrix) {
 }
 
 // void UpdateView() {
-//     // Матрица камеры
+// // Camera matrix
 //     //float view[16];
 //     //float camera_pos_x, camera_pos_y, camera_pos_z;
 //     float yaw_rad, pitch_rad, roll_rad;
 //     float at_x, at_y, at_z;
-//     float dir_x, dir_y, dir_z;   // направление взгляда
+// float dir_x, dir_y, dir_z;   // view direction
 //     //float world_up_x, world_up_y, world_up_z;
 //     float cos_theta, sin_theta;
 //     float dot;
 //     float up_x, up_y, up_z;
-//     float cross_x, cross_y, cross_z;
-//     // Ограничиваем pitch, чтобы камера не перевернулась
-//     //if (camera.pitch > 89.0f)  camera.pitch = -89.0f;
-//     //if (camera.pitch < -89.0f) camera.pitch = 89.0f;
-//     // Перевод в радианы
-//     yaw_rad   = camera.yaw   * DEGTORAD;
+// // Already unitary if forward is unitary
+// // Apply offsets
+// camera.pos_x += dir_x * forwardDelta + dir_x * rightDelta + up_x * upDelta;
+// camera.pos_y += dir_y * forwardDelta + dir_y * rightDelta + up_y * upDelta;
+// camera.pos_z += dir_z * forwardDelta + dir_z * rightDelta + up_z * upDelta;
+// }
 //     pitch_rad = camera.pitch * DEGTORAD;
 //     roll_rad  = camera.roll  * DEGTORAD;
 //     // Вычисляем направление взгляда
 //     dir_x = fast_cos(pitch_rad) * fast_sin(yaw_rad);
 //     dir_y = fast_sin(pitch_rad);
 //     dir_z = fast_cos(pitch_rad) * fast_cos(yaw_rad);
-//     // Точка, куда смотрит камера = позиция + направление * дистанция
-//     at_x = camera.pos_x + dir_x;
+// void UpdateView() {
+// // Camera rotation around world origin in degrees
 //     at_y = camera.pos_y + dir_y;
 //     at_z = camera.pos_z + dir_z;
 //     // at_x = dir_x;
 //     // at_y = dir_y;
 //     // at_z = dir_z;
 //     // world_up — это то, что было раньше (0, 1, 0)
-//     up_x = 0.0f;
+// Camera rotation around itself in quaternions
 //     up_y = 1.0f;
 //     up_z = 0.0f;
 //     // Rodrigues' rotation formula: поворачиваем world_up вокруг dir на угол roll
 //     cos_theta = fast_cos(roll_rad);
 //     sin_theta = fast_sin(roll_rad);
 //     // dot = world_up • dir
-//     dot = dir_x * up_x + dir_y * up_y + dir_z * up_z;  // = dir_y
+// Convert deltas to radians
 //     // cross = dir × world_up
 //     cross_x = dir_y * up_z - dir_z * up_y;
 //     cross_y = dir_z * up_x - dir_x * up_z;
 //     cross_z = dir_x * up_y - dir_y * up_x;
-//     // rotated_up = world_up * cos + (dir × world_up) * sin + dir * dot * (1 - cos)
+// Create quaternion change: order YXZ (yaw, pitch, roll)
 //     up_x = up_x * cos_theta + cross_x * sin_theta + dir_x * dot * (1.0f - cos_theta);
 //     up_y = up_y * cos_theta + cross_y * sin_theta + dir_y * dot * (1.0f - cos_theta);
-//     up_z = up_z * cos_theta + cross_z * sin_theta + dir_z * dot * (1.0f - cos_theta);
+// Apply to current orientation
 //     // Строим View-матрицу
 //     //MatrixIdentity(view);
 //     // MatrixTranslation(view,                    // результат
 //     //     camera.pos_x, camera.pos_y, camera.pos_z);
 //     //     MatrixTranslation(view,                    // результат
-//     //     camera.pos_x, camera.pos_y, camera.pos_z);
+// Camera movement considering its rotation in quaternions
 //     MatrixLookAt2(view,                    // результат
-//         camera.pos_x, camera.pos_y, camera.pos_z,   // eye
-//         at_x, at_y, at_z,                              // at
-//         up_x, up_y, up_z);
-// }
+// Get current directions from quaternion
+// forward
+// right
+// up
 
 // Обновляем матрицу вида с учётом текущего положения и поворота камеры
 void UpdateMatricesViewProj() {

@@ -1,33 +1,30 @@
-// PRIMITIV.С - отрисовка на экране примитивных моделей
-
-// GrVertex v = {
-//    -1.0f, -1.0f, 1.0f,           // x y z
-//    255, 0, 0, 255,               // r g b a
-//    0.0f,                         // ooz
-//    1.0f,                         // oow = 1/w
-//    0.0f, 0.0f                    // s0 t0 для TMU0
-    // если несколько TMU — дальше tmuVtx[1][0], [1][1] и т.д.
-//};
-
+// PRIMITIV.С - rendering simple models on screen
+// va.oow > 0.0f || vb.oow > 0.0f - va.oow > 0.0f || vb.oow > 0.0f
+// va.z > 0.0f && vb.z > 0.0f - va.z > 0.0f && vb.z > 0.0f
+// va.ooz > 0.0f && vb.ooz > 0.0f - va.ooz > 0.0f && vb.ooz > 0.0f
+// X - КРАСНЫЙ - X - RED
+// Y - ЗЕЛЁНЫЙ - Y - GREEN
+// Z - СИНИЙ - Z - BLUE
+    // p-массивы для числителей, q-массивы для знаменателей - p-arrays for numerators, q-arrays for denominators
+// Линия параллельна границе - Line is parallel to the boundary
 /*
-    Всё ешё не могу понять, почему в разных треугольниках
-    текстура маппится по-разному.
-    Например, для шестой грани текстурные 0, 0
-    находятся слева сверху.
-    А для красной грани текстурные 0, 0 находятся
-    в левом нижнем углу.
+  Вход в область - Entry into the area
+  Выход из области - Exit from the area
+  Нет видимой части - No visible part
+  Вычисляем новые координаты концов видимого отрезка - Calculate new coordinates of the visible segment ends
+  п-массивы для числителей, q-массивы для знаменателей - p-arrays for numerators, q-arrays for denominators
 */
 
 /*
-typedef struct
-{
-  float x, y, z;                // X, Y, and Z of scrn space -- Z is ignored
-  float r, g, b;                // R, G, B, ([0..255.0])
-  float ooz;                    // 65535/Z (used for Z-buffering)
-  float a;                      // Alpha [0..255.0]
-  float oow;                    // 1/W (used for W-buffering, texturing)
-  GrTmuVertex  tmuvtx[GLIDE_NUM_TMU];
-} GrVertex;
+  Выход из области - Exit from the area
+  Нет видимой части - No visible part
+    Вычисляем новые координаты концов видимого отрезка - Calculate new coordinates of the visible segment ends
+    X - КРАСНЫЙ - X - RED
+    ABGR: A=255, B=0, G=0, R=255 - ABGR: A=255, B=0, G=0, R=255
+    Clip by Screen - Clip by Screen
+    if (va.z > 0.0f && vb.z > 0.0f) - if (va.z > 0.0f && vb.z > 0.0f)
+    if (va.ooz > 0.0f && vb.ooz > 0.0f) - if (va.ooz > 0.0f && vb.ooz > 0.0f)
+  grDrawLine(&va, &vb) - grDrawLine(&va, &vb)
 */
 
 #define CUBE_SIZE 1.0f
@@ -53,11 +50,11 @@ void generate_base_models() {
     float nx, ny, nz;
     unsigned char cr, cg, cb;
     
-    // Базовые 4 угла грани в локальной системе координат грани
+    // Y — ЗЕЛЁНЫЙ
     float u[4] = {0.0f, 1.0f, 1.0f, 0.0f};
     float v[4] = {0.0f, 0.0f, 1.0f, 1.0f};
     
-    // Индексы для двух треугольников: 0-1-2 и 0-2-3
+    // 恢复先前的状态
     //             2--3
     //             | \|    3
     //             1--0  / |
@@ -72,7 +69,7 @@ void generate_base_models() {
     float s, t;
     GrVertex *vtx;
 
-    // 6 граней: нормаль (направление), цвет
+    // 6 faces: normal (direction), color
     FaceInfo faces[6] = {
         { 0,  0,  1, 255,   0,   0 },  // +Z  красная
         { 0,  0, -1,   0, 255,   0 },  // -Z  зелёная
