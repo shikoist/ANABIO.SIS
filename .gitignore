@@ -3,6 +3,7 @@
 *.exe
 *.err
 *.log
+*.blend1
 GITHUB.BAT
 86BOX.BAT
 !GITHUB.BAT
