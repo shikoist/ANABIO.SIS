@@ -2,6 +2,8 @@ name MAIN.EXE
 
 sys dos4g
 
+file GAME_00.OBJ
+file GAME_01.OBJ
 file SOUND.OBJ
 file KEYBOARD.OBJ
 file CAMERA.OBJ

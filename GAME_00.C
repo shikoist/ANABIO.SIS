@@ -1,12 +1,21 @@
-#include "camera.h"
-#include "texture.h"
-#include "keyboard.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#include "MESH.H"
+#include "CAMERA.H"
+#include "TEXTURE.H"
+#include "TEXT.H"
+#include "KEYBOARD.H"
+#include "SOUND.H"
+#include "MAIN.H"
 #include "GAME_00.H"
 
 // Prepared textures count
 // With numbers in the TEXTURES folder
 // At values =192 =256 =512 it gives Stack Overflow
 #define MAX_TEXTURES       32
+#define MAX_TMU 3
 
 #define TEXTURE_DATA_SIZE  131072
 
@@ -26,8 +35,8 @@ int current_texture = 0;
 
 int i, j, a, b;
 
-Font fpsFont;
-char fpsString[80];
+
+
 
 unsigned long frame_ticks_before;
 unsigned long frame_ticks_after;
@@ -37,7 +46,7 @@ FxU32 max_tmu_memory[MAX_TMU];
 int max_textures[MAX_TMU]; // Maximum number of textures allowed for TMU
 
 int key;
-int exit_now = 0;
+
 
 float stop = 2000.0f;
 
@@ -80,9 +89,7 @@ unsigned int gunshot_size, gunshot_rate, gunshot_channels;
 unsigned int door_size, door_rate, door_channels;
 unsigned int explosion_size, explosion_rate, explosion_channels;
 
-void game_00_start() {
-
-
+int game_00_start() {
    // Loading sounds (data already in memory)
    synth =     load_wav("MUSIC/SYNTH.WAV", &synth_size, &synth_rate, &synth_channels);
    upbeat =    load_wav("MUSIC/UPBEAT.WAV", &upbeat_size, &upbeat_rate, &upbeat_channels);
@@ -92,51 +99,19 @@ void game_00_start() {
    
    //test_sound_generator();
    //test_stereo();
-   //mixer_play_sound(-1, gunshot, gunshot_size, gunshot_rate, 0, 0);
-   //mixer_play_sound(-1, upbeat, upbeat_size, upbeat_rate, 1, 0);
    mixer_play_sound_ex(-1, synth, synth_size, synth_rate, 2, 1, 0);
 
-   //play_sound("MUSIC\\UPBEAT.WAV");
-
-   // Preload sounds into channels
-   // mixer_play_sound(0, gunshot, gunshot_size, gunshot_rate, 0, 0); // Channel 0 - gunshots
-   // mixer_play_sound(1, door, door_size, door_rate, 0, 1);          // Channel 1 - doors
-   // mixer_play_sound(2, explosion, explosion_size, explosion_rate, 0, 0); // Channel 2 - explosions
-
-
-
-   // Here we load the font
-   //if (LoadFont("TEXTURES\\font_sqr.3df", &fpsFont) != 0) {
-   if (LoadFont("TEXTURES\\font.3df", &fpsFont) != 0) {
-      printf("Failed to load font!\n");
-      SafeReturn();
-      return 1;
-   }
-
-
-   
    if (LoadTexture(someTextureName, &someTextureSlot, 0) != 0) {
       printf("Error loading %s\n", someTextureName);
-      SafeReturn();
-      return 1;
+      return -1;
    }
 
    // Try to load ship model
    someMesh = LoadMeshFromOBJ(someModelName);
    if (!someMesh) {
       printf("Failed to load mesh %s\n", someModelName);
-      SafeReturn();
-      return 1;
+      return -1;
    }
-
-   grDepthBufferMode( GR_DEPTHBUFFER_WBUFFER );
-   //grDepthBufferMode( GR_DEPTHBUFFER_ZBUFFER );
-   grDepthBufferFunction( GR_CMP_LEQUAL );
-   grDepthMask(FXTRUE);
-
-   // grCullMode(GR_CULL_DISABLE); // All triangles are visible
-   // grCullMode(GR_CULL_POSITIVE); // Visible triangles clockwise
-   grCullMode(GR_CULL_NEGATIVE); // Visible triangles counterclockwise - standard for Blender
 
    SetupCamera(
       0, 30, -7, // position
@@ -144,16 +119,11 @@ void game_00_start() {
       90, 4.0f/3.0f, // FOV, aspect
       3.0f, 100.0f); // near_clip, far_clip
 
-   //printf("Free memory: %lu bytes\n", GetFreeMemory());  // Watcom-specific
-
-   delay(1);
-
+   return 1;
 }
 
-void game_00_update() {
-   exit_now = 0;
-
-   if (key_states[KEY_ESCAPE]) break; // ESC
+int game_00_update() {
+   if (key_states[KEY_ESCAPE]) return -2; // ESC
    
    if (key_states[KEY_DELETE])    RotateCameraAroundLocal(0, -camera_rotation_speed * delta_time, 0);
    if (key_states[KEY_PAGEDOWN])  RotateCameraAroundLocal(0,  camera_rotation_speed * delta_time, 0);
@@ -197,8 +167,7 @@ void game_00_update() {
 
    // Load game 01
    if (key_states[KEY_1] == 1 && key_states_prev[KEY_1] == 0) {
-      //player_shoots = 1;
-      current_screen = 1;
+      player_shoots = 1;
       key_states_prev[KEY_1] = 1;
    }
    if (key_states[KEY_1] == 0) {
@@ -270,15 +239,7 @@ void game_00_update() {
    //    angleX, angleY, angleZ,
    //    1.0f, 1.0f, 1.0f);
    
-   // Text is drawn last
-   // Draw FPS (white color = 0xFFFFFFFF)
-   DrawTextF(&fpsFont, 8.0f, 8, COLOR_WHITE, "ANABIO.SIS BY SHIKOIST build %d", build);
-   DrawText(&fpsFont, 8.0f, 8 + 16, COLOR_MAGENTA, fpsString);
-   DrawTextF(&fpsFont, 320.0f, 8 + 16, COLOR_MAGENTA, "TIME: %.2f", time);
-   DrawTextF(&fpsFont, 8.0f, 8 + 16*2, COLOR_MAGENTA, "Cam Pos: %.1f %.1f %.1f", camera.pos_x, camera.pos_y,camera.pos_z);
-   DrawTextF(&fpsFont, 8.0f, 8 + 16*3, COLOR_MAGENTA, "Triangles: %d (%d/sec)", triangles_drawn, triangles_drawn * (int)(1.0f / delta_time));
-   DrawTextF(&fpsFont, 8.0f, 8 + 16*4, COLOR_MAGENTA, "irqs: %d | status: %d | read: %d", counter, irq_debug_last_status, irq_debug_read_data);
-
+   
    
 
    // Test sound 1 - gunshot (KEY 1)
@@ -318,8 +279,14 @@ void game_00_update() {
    //    dma_block_finished_flag = 0;
    //}
    //delay(1);
+
+   return 1;
 }
 
-void game_00_clear() {
-
+int game_00_clear() {
+   UnloadMesh(someMesh);
+   free(gunshot);
+   free(door);
+   free(explosion);
+   return 1;
 }

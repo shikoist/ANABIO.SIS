@@ -19,6 +19,8 @@
 #include <dos.h>
 #include <malloc.h>
 
+#include "MAIN.H"
+
 #include "mesh.h"
 #include "keyboard.h"
 #include "camera.h"
@@ -44,6 +46,8 @@ FxI32 num_tmu = 0; // Number of TMU
 
 int frame = 0;
 
+int exit_now = 0;
+
 float frequency;
 float f1;
 float f2;
@@ -51,20 +55,29 @@ float delta_time;
 unsigned long curr_ticks;
 unsigned long prev_ticks;
 unsigned long delta_ticks;
-float time = 0;
+float local_time = 0;
 float secondsConsole = 0;
 
 int count = 0;
 
 GrColor_t backColor;
 
-int SafeReturn() {
+int i, j, k, a, b, c;
+
+Font fpsFont;
+char fpsString[80];
+
+int safe_shutdown() {
 
    //free(tempVtxBuffer);
    grSstWinClose();
    grGlideShutdown();
    timer_shutdown();
    keyboard_shutdown();
+   sb_stop_playback();
+   //sb_cleanup();
+   cleanup_buffers();
+   cleanup_irq_handler();
    return 0;
 }
 
@@ -100,10 +113,12 @@ int main()
 {
    // Here we will leave only the most necessary
    build = read_version();
+   printf("Build number: %d\n", build);
 
    srand(dos_time);
+   
 
-   init_fast_math();
+   init_fast_math(); puts("init_fast_math()");
    generate_base_models();
 
    f1 = (float)BASE_FREQUENCY;
@@ -111,8 +126,8 @@ int main()
    frequency = f1 / f2;
    printf("New Timer frequency: %.2f Hz\n", frequency);
    
-   keyboard_init();
-   timer_init();
+   keyboard_init(); puts("keyboard_init()");
+   timer_init(); puts("timer_init()");
 
    prev_ticks = dos_time;
 
@@ -152,12 +167,21 @@ int main()
    num_tmu = hwconfig.SSTs[0].sstBoard.VoodooConfig.nTexelfx;;
    if (num_tmu < 0 || num_tmu > 3) {
       printf("Found incorrect number of TMUs: %d\n", (int)num_tmu);
-      SafeReturn();
+      safe_shutdown();
       return 0;
    }
    else {
       printf("Found TMUs: %d\n", (int)num_tmu);
    }
+
+   grDepthBufferMode( GR_DEPTHBUFFER_WBUFFER );
+   //grDepthBufferMode( GR_DEPTHBUFFER_ZBUFFER );
+   grDepthBufferFunction( GR_CMP_LEQUAL );
+   grDepthMask(FXTRUE);
+
+   // grCullMode(GR_CULL_DISABLE); // All triangles are visible
+   // grCullMode(GR_CULL_POSITIVE); // Visible triangles clockwise
+   grCullMode(GR_CULL_NEGATIVE); // Visible triangles counterclockwise - standard for Blender
 
    delay(1);
 
@@ -185,6 +209,13 @@ int main()
    
    // getch();   
 
+   // Here we load the font
+   //if (LoadFont("TEXTURES\\font_sqr.3df", &fpsFont) != 0) {
+   if (LoadFont("TEXTURES\\font.3df", &fpsFont) != 0) {
+      printf("Failed to load font!\n");
+      return -1;
+   }
+
    game_00_start();
    //game_01_start();
 
@@ -203,7 +234,7 @@ int main()
       curr_ticks = dos_time;
       delta_ticks = curr_ticks - prev_ticks;   // tick difference
       delta_time = (float)delta_ticks / frequency;   // seconds
-      time += delta_time;
+      local_time += delta_time;
       secondsConsole += delta_time;
 
       // To prevent frequent console output
@@ -220,7 +251,9 @@ int main()
 
       switch (current_screen) {
          case 0: {
-            game_00_update();
+            if (game_00_update() == -2) {
+               exit_now = 1;
+            };
             break;
          }
          case 1: {
@@ -228,6 +261,16 @@ int main()
             break;
          }
       }
+
+      // Text is drawn last
+      // Draw FPS (white color = 0xFFFFFFFF)
+      DrawTextF(&fpsFont, 8.0f, 8, COLOR_WHITE, "ANABIO.SIS BY SHIKOIST build %d", build);
+      DrawText(&fpsFont, 8.0f, 8 + 16, COLOR_MAGENTA, fpsString);
+      DrawTextF(&fpsFont, 320.0f, 8 + 16, COLOR_MAGENTA, "TIME: %.2f", local_time);
+      DrawTextF(&fpsFont, 8.0f, 8 + 16*2, COLOR_MAGENTA, "Cam Pos: %.1f %.1f %.1f", camera.pos_x, camera.pos_y,camera.pos_z);
+      DrawTextF(&fpsFont, 8.0f, 8 + 16*3, COLOR_MAGENTA, "Triangles: %d (%d/sec)", triangles_drawn, triangles_drawn * (int)(1.0f / delta_time));
+      DrawTextF(&fpsFont, 8.0f, 8 + 16*4, COLOR_MAGENTA, "irqs: %d | status: %d | read: %d", counter, irq_debug_last_status, irq_debug_read_data);
+
 
       //grSstIdle();
       grBufferSwap(0);
@@ -245,20 +288,13 @@ int main()
       // Sound processing
       //mixer_process();
       
+
+      if (exit_now == 1) break;
    }
    
-   SafeReturn();
+   game_00_clear();
+
+   safe_shutdown(); puts("safe_shutdown()");
    
-   UnloadMesh(someMesh);
-
-   sb_stop_playback();
-   //sb_cleanup();
-   cleanup_buffers();
-   cleanup_irq_handler();
-
-   free(gunshot);
-   free(door);
-   free(explosion);
-
    return 0;
 }
