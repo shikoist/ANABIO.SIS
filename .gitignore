@@ -8,6 +8,7 @@ GITHUB.BAT
 86BOX.BAT
 !GITHUB.BAT
 !86BOX.BAT
+TEXTURES/make_font_ffmpeg.bat
 thumbs.db
 desktop.ini
 .vscode/
