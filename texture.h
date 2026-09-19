@@ -4,8 +4,8 @@
 #include "glide.h"
 
 typedef struct {
-    GrTexInfo      grTexInfo;      // Glide-структура для grTexSource / grTexDownloadMipMap
-    FxU32          baseAddr;    // адрес в текстурной памяти TMU
+    GrTexInfo      grTexInfo;      // Glide-structure for grTexSource / grTexDownloadMipMap
+    FxU32          baseAddr;    // address in texture memory TMU
     char           filename[256];
     FxU32          mem_required;
     int            tmu;

@@ -202,7 +202,6 @@ int main()
 
    mixer_init();
 
-   is_playing = 1;  // Start sound stream
    first_run = 1;   // To initialize DSP
    // dsp_write(DSP_CMD_SPEAKER_ON);  // Turn on speakers!
 

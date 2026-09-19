@@ -1,4 +1,4 @@
-// text.c - отрисовка текста на экране
+// text.c - drawing text on the screen
 #include "text.h"
 
 #include <stdarg.h>
@@ -28,25 +28,25 @@ int LoadFont(const char* filename, Font* font)
     font->texW      = 256.0f;
     font->texH      = 256.0f;
 
-    // Заполняем таблицу UV (точно как в tlib, только проще)
+    // filling the UV table (exactly as in tlib, but simpler)
     memset(font->fontTable, 0, sizeof(font->fontTable));
 
-    for (i = 32; i < 128; i++) {           // от пробела до ~
+    for (i = 32; i < 128; i++) {           // from space to tilde
         char* hit = strchr(fontString, (char)i);
         if (hit) {
             int offset = (int)(hit - fontString);
             int col = offset % font->charW;
             int row = offset / font->charH;
 
-            font->fontTable[i][0] = (FxU8)(col * font->charW);   // x в текселях
-            font->fontTable[i][1] = (FxU8)(row * font->charH);   // y в текселях
+            font->fontTable[i][0] = (FxU8)(col * font->charW);   // x in texels
+            font->fontTable[i][1] = (FxU8)(row * font->charH);   // y in texels
         }
     }
 
-    // Скачиваем в TMU (если ещё не скачано в LoadTexture)
+    // download to TMU (if not already downloaded in LoadTexture)
     //grTexDownloadMipMap(GR_TMU0, font->baseAddr, GR_MIPMAPLEVELMASK_BOTH, &font->grTexInfo);
 
-    // Освобождаем host-память
+    // free host memory
     //if (slot.grTexInfo.data) {
     //    free(slot.grTexInfo.data);
     //    slot.grTexInfo.data = NULL;
@@ -56,7 +56,7 @@ int LoadFont(const char* filename, Font* font)
     return 0;
 }
 
-/* Основная функция вывода текста */
+/* main text output function */
 void DrawText(Font* font, float x, float y, FxU32 color, const char* str)
 {
     GrState state;
@@ -70,22 +70,21 @@ void DrawText(Font* font, float x, float y, FxU32 color, const char* str)
 
     grGlideGetState(&state);
 
-    // Включаем отбрасывание чёрных пикселей
+    // enable black pixel discard
     grChromakeyMode(GR_CHROMAKEY_ENABLE);
     grChromakeyValue(0x00000000);
 
-    // Красим в заданный цвет
+    // fill with specified color
     grConstantColorValue(color);
     //grConstantColorValue(0xFFFF0000);
 
-    // Убираем размазывание для текста
-    // Будем резаться об острые края пикселей
+    // remove blurring for text
     grTexFilterMode(
         GR_TMU0,
         GR_TEXTUREFILTER_POINT_SAMPLED,
         GR_TEXTUREFILTER_POINT_SAMPLED);
 
-    /* Настраиваем состояние только для текста */
+    /* configure state only for text */
     grColorCombine(
         GR_COMBINE_FUNCTION_SCALE_OTHER,
         GR_COMBINE_FACTOR_LOCAL,
@@ -117,7 +116,7 @@ void DrawText(Font* font, float x, float y, FxU32 color, const char* str)
         GR_BLEND_ZERO);
 
 
-    // Что-то странное тут творится
+    // something strange is happening here
     //grDepthBufferFunction(GR_CMP_ALWAYS);
     //grDepthMask(FXFALSE);
     grCullMode(GR_CULL_DISABLE);
@@ -140,7 +139,7 @@ void DrawText(Font* font, float x, float y, FxU32 color, const char* str)
         tx = font->fontTable[c][0];
         ty = font->fontTable[c][1];
 
-        /* Четыре вершины */
+        /* four vertices */
         // GR_ORIGIN_LOWER_LEFT
         // v[0].x = curX;
         // v[0].y = y + font->charH;
@@ -166,7 +165,7 @@ void DrawText(Font* font, float x, float y, FxU32 color, const char* str)
         v[2].oow = 1.0f; 
         v[3].oow = 1.0f;
 
-        /* Текстурные координаты (в формате Glide — sow/tow) */
+        /* texture coordinates (in Glide format — sow/tow) */
         // GR_ORIGIN_LOWER_LEFT
         // v[0].tmuvtx[0].sow = tx;
         // v[0].tmuvtx[0].tow = ty;
@@ -200,7 +199,7 @@ void DrawText(Font* font, float x, float y, FxU32 color, const char* str)
         curX += font->charW;
     }
 
-    grGlideSetState(&state);   // восстанавливаем всё предыдущее состояние
+    grGlideSetState(&state);   // restore previous state
 }
 
 void DrawTextF(Font* font, float x, float y, FxU32 color, const char* fmt, ...)

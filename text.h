@@ -25,7 +25,7 @@ typedef struct {
     FxU8        fontTable[128][2];
 } Font;
 
-int  LoadFont(const char* filename, Font* font);           // загрузка
+int  LoadFont(const char* filename, Font* font);           // loading
 void DrawText(Font* font, float x, float y, FxU32 color, const char* str);
 void DrawTextF(Font* font, float x, float y, FxU32 color, const char* fmt, ...);
 

@@ -3,22 +3,22 @@
 #ifndef _TIMER_H
 #define _TIMER_H
 
-// Используемое прерывание
+// Used interrupt
 //#define TIMER_INTERRUPT 0x1C
 #define TIMER_INTERRUPT  0x08
 
-// Частота стандартного таймера
+// Frequency of standard timer
 #define BASE_FREQUENCY  1193182UL
 
-// Во сколько раз чаще будет срабатывать таймер
+// How many times more frequently the timer will trigger
 #define MULTIPLIER 64
 
-// BASE_FREQUENCY / DOS_DIVIDER = ~18.2 тиков/секунду (стандартный)
+// BASE_FREQUENCY / DOS_DIVIDER = ~18.2 ticks/second (standard)
 #define DOS_DIVIDER 65535UL
 
 #define CUSTOM_DIVIDER DOS_DIVIDER / MULTIPLIER
 
-extern volatile unsigned long dos_time;  // текущее значение счётчика
+extern volatile unsigned long dos_time;  // current counter value
 
 void set_timer_divider(unsigned long divider);
 void timer_shutdown();

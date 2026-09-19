@@ -20,7 +20,7 @@
 #define DSP_STATUS     (sb_port + DSP_WRITE_PORT_OFFSET)
 #define DSP_DATA_AVAIL (sb_port + DSP_DATA_AVAILABLE_OFFSET)
 
-#define DMA_PAGE_REGISTER           0x83   // для канала 1
+#define DMA_PAGE_REGISTER           0x83   // for channel 1
 #define DMA_MASK_REGISTER           0x0A
 #define DMA_MODE_REGISTER           0x0B
 #define DMA_CLEAR_BYTE_POINTER      0x0C
@@ -28,58 +28,64 @@
 #define DMA_MODE_SINGLE_CYCLE       0x48
 #define DMA_MODE_AUTO_INIT          0x58
 
-#define DSP_CMD_8BIT_SINGLE_OUTPUT           0xC0   //  8-битный single-cycle DAC output (mono)
-#define DSP_CMD_8BIT_SINGLE_OUTPUT_HI        0xC1   //  8-битный single-cycle, high-speed (SB Pro)
-#define DSP_CMD_8BIT_AUTO_OUTPUT             0xC6   //  8-битный auto-init DAC output (SB Pro)
-#define DSP_CMD_8BIT_AUTO_OUTPUT_HI          0xC7   //  8-битный auto-init, high-speed
+#define DSP_CMD_8BIT_SINGLE_OUTPUT           0xC0   // 8-bit single-cycle DAC output (mono)
+#define DSP_CMD_8BIT_SINGLE_OUTPUT_HI        0xC1   // 8-bit single-cycle, high-speed (SB Pro)
+#define DSP_CMD_8BIT_AUTO_OUTPUT             0xC6   // 8-bit auto-init DAC output (SB Pro)
+#define DSP_CMD_8BIT_AUTO_OUTPUT_HI          0xC7   // 8-bit auto-init, high-speed
 
-#define DSP_CMD_8BIT_DMA_SETUP               0x14   // Без этой команды у меня ничего не работало
-#define DSP_CMD_8BIT_AUTO_INIT_DAC           0x1C   //  8-битный auto-init DAC output (SB16, основной)
-#define DSP_CMD_8BIT_HIGH_SPEED_SINGLE       0x1E   //  8-битный high-speed single-cycle (редко)
+#define DSP_CMD_8BIT_DMA_SETUP               0x14   // Without this command, nothing worked for me
+#define DSP_CMD_8BIT_AUTO_INIT_DAC           0x1C   // 8-bit auto-init DAC output (SB16, main)
+#define DSP_CMD_8BIT_HIGH_SPEED_SINGLE       0x1E   // 8-bit high-speed single-cycle (rarely)
 
-#define DSP_CMD_16BIT_SINGLE_OUTPUT          0xB0   // 16-битный single-cycle DAC output
-#define DSP_CMD_16BIT_AUTO_OUTPUT            0xB4   // 16-битный single-cycle, FIFO
-#define DSP_CMD_16BIT_AUTO_INIT_DAC          0xB6   // 16-битный auto-init DAC output
-#define DSP_CMD_16BIT_HIGH_SPEED_SINGLE      0xB8   // 16-битный high-speed single-cycle
+#define DSP_CMD_16BIT_SINGLE_OUTPUT          0xB0   // 16-bit single-cycle DAC output
+#define DSP_CMD_16BIT_AUTO_OUTPUT            0xB4   // 16-bit single-cycle, FIFO
+#define DSP_CMD_16BIT_AUTO_INIT_DAC          0xB6   // 16-bit auto-init DAC output
+#define DSP_CMD_16BIT_HIGH_SPEED_SINGLE      0xB8   // 16-bit high-speed single-cycle
 
 #define DSP_CMD_PAUSE_DMA                    0xD0   // Pause 8/16-bit DMA transfer
-#define DSP_CMD_CONTINUE_DMA                 0xD4   // Continue DMA transfer после паузы
+#define DSP_CMD_CONTINUE_DMA                 0xD4   // Continue DMA transfer after pause
 #define DSP_CMD_EXIT_AUTO_INIT               0xDA   // Exit 8-bit auto-init mode
 #define DSP_CMD_EXIT_16BIT_AUTO_INIT         0xD9   // Exit 16-bit auto-init mode
 
 #define DSP_CMD_SPEAKER_ON                   0xD1   // Turn speaker ON
 #define DSP_CMD_SPEAKER_OFF                  0xD3   // Turn speaker OFF
 
-#define DSP_CMD_SAMPLE_RATE				     0x40   // SBPRO2  Sample Rate
-#define DSP_CMD_SET_PLAYBACK_RATE            0x41   // SB16  Set playback sample rate (2 байта после команды)
-#define DSP_CMD_SET_CAPTURE_RATE             0x42   // SB16  Set recording sample rate
+#define DSP_CMD_SAMPLE_RATE				     0x40   // SBPRO2 Sample Rate
+#define DSP_CMD_SET_PLAYBACK_RATE            0x41   // SB16 Set playback sample rate (2 bytes after command)
+#define DSP_CMD_SET_CAPTURE_RATE             0x42   // SB16 Set recording sample rate
 
-#define DSP_CMD_GET_VERSION                  0xE1   // Get DSP version (возвращает major.minor)
-#define DSP_CMD_RESET                        0xFF   // Через порт Reset (не команда DSP, а отдельный порт)
+#define DSP_CMD_GET_VERSION                  0xE1   // Get DSP version (returns major.minor)
+#define DSP_CMD_RESET                        0xFF   // Reset via port (not a DSP command, separate port)
 
 #define DSP_MODE_MONO                        0x00
 #define DSP_MODE_UNSIGNED                    0x00
-#define DSP_MODE_SIGNED                      0x10    // для 16-бит
+#define DSP_MODE_SIGNED                      0x10    // for 16-bit
 #define DSP_MODE_STEREO                      0x20
 
 typedef struct {
-    unsigned char *data;        // Данные звука
-    unsigned int position;      // Текущая позиция
-    unsigned int size;          // Размер звука
-    unsigned int sample_rate;   // Частота
-    int channels;               // 1 = моно, 2 = стерео
-    int volume;                 // Громкость (0-255)
-    int volume_l;               // Громкость левого канала
-    int volume_r;               // Громкость правого канала
-    int playing;                // Активен?
-    int looping;                // Зациклен?
-    int priority;               // Приоритет (0-высокий)
+    unsigned char *data;        // Audio data
+    unsigned int position;      // Current position
+    unsigned int size;          // Size in bytes
+    unsigned int sample_rate;   // Frequency
+    int channels;               // 1 = mono, 2 = stereo
+    int volume;                 // Volume (0-255)
+    int volume_l;               // Left channel volume
+    int volume_r;               // Right channel volume
+    int playing;                // Active?
+    int looping;                // Looped?
+    int priority;               // Priority (0-high)
 } SoundStream;
+
+typedef struct {
+    unsigned char *data;
+    unsigned int sample_rate;   // Frequency
+    int channels;               // 1 = mono, 2 = stereo
+    unsigned int size;          // Size in bytes
+} Sound;
 
 extern SoundStream streams[MAX_STREAMS];
 extern unsigned char mix_buffer[BUFFER_SIZE];
 
-extern volatile int is_playing;
 extern volatile int dma_block_finished_flag;
 extern int playing_final_chunk;
 
@@ -94,11 +100,8 @@ extern unsigned int current_buffer;
 extern unsigned int next_buffer;
 extern unsigned int first_run;
 
-// Прототипы функций
+// Function prototypes
 void mixer_init();
-int mixer_play_sound(int channel, const unsigned char *data, 
-                     unsigned int size, unsigned int sample_rate, 
-                     int looping, int priority);
 void mixer_stop(int channel);
 void mixer_free_channel(int channel);
 void mixer_set_volume(int channel, int volume);
@@ -120,22 +123,14 @@ void setup_dma_controller_only(unsigned char *buffer);
 int fill_buffer(unsigned char *buffer, int buffer_index);
 void swap_buffers();
 void cleanup_buffers();
-//void sb_cycle_buffer();
-//void sb_copy_buffer();
 void sb_stop_playback();
-//int sb_cleanup();
-//int play_sound(const char *filename);
 void show_progress();
-unsigned char* load_wav(
+int load_wav(
     const char *filename,
-    unsigned int *size,
-    unsigned int *rate,
-    unsigned int *channels_out);
+    Sound *sound);
 void test_sound_generator();
 void test_stereo();
-int mixer_play_sound_ex(int channel, const unsigned char *data,
-                       unsigned int size, unsigned int sample_rate,
-                       int channels, int looping, int priority);
+int mixer_play_sound_ex(int channel, Sound *sound, int looping, int priority);
 void mixer_set_pan(int channel, int pan);       // 0=left, 128=center, 255=right
 void mixer_set_volume_stereo(int channel, int vol_l, int vol_r);
 void dsp_set_stereo(int enable);

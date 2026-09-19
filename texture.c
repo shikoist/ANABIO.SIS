@@ -1,4 +1,4 @@
-// texture.c - операции с текстурами
+// texture.c - texture operations
 #include "texture.h"
 
 #include <stdio.h>
@@ -10,13 +10,13 @@
 #include "glide.h"
 #include "text.h"
 
-static FxU32 currentTexAddr[3] = {0, 0, 0}; // На каждый TMU
+static FxU32 currentTexAddr[3] = {0, 0, 0}; // For each TMU
 
 int LoadTexture(const char* filename, TextureSlot* slot, int tmu)
 {
     Gu3dfInfo guInfo;
 
-    //currentTexAddr[0] = grTexMinAddress(GR_TMU0); // Столько занимает шрифт выше
+    // currentTexAddr[0] = grTexMinAddress(GR_TMU0); // This is how the font is occupied above
 
     if (tmu < 0 || tmu > 3) {
         printf("[LOAD] Found incorrect number of TMUs: %d\n", tmu);
@@ -36,13 +36,13 @@ int LoadTexture(const char* filename, TextureSlot* slot, int tmu)
     }
     //printf("Loading %s ...\n", filename);
     
-    // 1. Читаем заголовок
+    // 1. Reading the header
     if (gu3dfGetInfo(filename, &guInfo) == FXFALSE) {
         printf("Error on gu3dfGetInfo on %s\n", filename);
         return -1;
     }
     
-    // 2. Выделяем память
+    // 2. Allocating memory
     guInfo.data = malloc(guInfo.mem_required);
     if (!guInfo.data)
     {
@@ -72,7 +72,7 @@ int LoadTexture(const char* filename, TextureSlot* slot, int tmu)
     //}
     //printf("malloc %d\n", guInfo.mem_required);
 
-    // 3. Пишем указатель, куда будут загружены данные текстуры
+    // 3. Writing the pointer where the texture data will be loaded
     //guInfo.data = slot->grInfo.data;
     if (gu3dfLoad(filename, &guInfo) == FXFALSE)
     {
@@ -86,12 +86,12 @@ int LoadTexture(const char* filename, TextureSlot* slot, int tmu)
     }
     //puts("gu3dfLoad OK");
 
-    // 4. Заполняем GrTexInfo
+    // 4. Filling GrTexInfo
     slot->grTexInfo.smallLod    = guInfo.header.small_lod;
     slot->grTexInfo.largeLod    = guInfo.header.large_lod;
     slot->grTexInfo.aspectRatio = guInfo.header.aspect_ratio;
     slot->grTexInfo.format      = guInfo.header.format;
-    slot->grTexInfo.data        = guInfo.data; // Указатель на данные текстуры
+    slot->grTexInfo.data        = guInfo.data; // Pointer to texture data
     slot->tmu                   = tmu;
     slot->width                 = guInfo.header.width;
     slot->height                = guInfo.header.height;
@@ -102,17 +102,17 @@ int LoadTexture(const char* filename, TextureSlot* slot, int tmu)
         //&slot->grInfo);
         &slot->grTexInfo);
     
-    // Освобождаем host-память сразу после загрузки в VRAM
+    // Freeing host-memory immediately after loading to VRAM
     free(guInfo.data);
     guInfo.data = NULL;
     //free(slot->grInfo.data);
-    //slot->grTexInfo.data = NULL;   // больше не используем
+    // slot->grTexInfo.data = NULL;   // no longer used
 
     
 
     //printf("[TMU%d] texture %s loaded at: %d\n", tmu, filename, (unsigned int)slot->baseAddr);
 
 
-    currentTexAddr[tmu] += guInfo.mem_required; // Адрес для следующей текстуры
+    currentTexAddr[tmu] += guInfo.mem_required; // Address for the next texture
     return 0;
 }

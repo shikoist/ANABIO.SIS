@@ -1,12 +1,12 @@
-// timer.c - нам нужно чётко считать фпс
-// Для этого программируем Programmable Interval Timer (PIT) 8254 
-// (или его совместимый 8253) в реальном режиме x86
-// (DOS, OpenWatcom) для срабатывания во много раз чаще.
-// У меня это в 64 раза чаще.
-// С помощью #define MULTIPLIER 64 в timer.h
+// timer.c - we need to accurately count the FPS
+// For this, we program the Programmable Interval Timer (PIT) 8254
+// (or its compatible 8253) in real mode x86
+// (DOS, OpenWatcom) to trigger much more frequently.
+// Mine is 64 times more frequent.
+// Using #define MULTIPLIER 64 in timer.h
 
-// Просто для удобства, а то всё время забываю
-// где какой байт
+// Just for convenience, so I don't keep forgetting
+// where each byte is
 #define LOW_BYTE(w) ((unsigned char)((unsigned short)(w) & 0xFF))
 #define HIGH_BYTE(w) ((unsigned char)(((unsigned short)(w) >> 8)) & 0xFF)
 
@@ -17,41 +17,41 @@
 
 void interrupt (*old_timer_interrupt)();
 
-// volatile означает другое поведение для переменной
-// с точки зрения компилятора, она может быть изменена
-// в любой момент времени
+// volatile means different behavior for a variable
+// from the compiler's perspective, it may be changed
+// at any moment in time
 volatile unsigned long dos_time = 0;
 
 void interrupt timer_interrupt_handler() {
-    // Нужно вызывать старый обработчик
-    // раз в новое количество раз
+    // We need to call the old handler
+    // once the new number of times
     if (dos_time % MULTIPLIER == 0) {
         old_timer_interrupt();
     }
-    // будем брать это значение в основном рабочем цикле
+    // we will take this value in the main working loop
     dos_time++;
 
-    outp(0x20, 0x20); // Засылаем EOI в PIC, а то может зависнуть
+    outp(0x20, 0x20); // We send an EOI to PIC, otherwise it may hang
 }
 
-// Функция настраивает канал 0 таймера 
-// (тот самый, который генерит IRQ 0 — системное прерывание таймера).
+// The function configures timer channel 0
+// (that very one which generates IRQ 0 - the timer interrupt).
 void set_timer_divider(unsigned long divider) {
-    // Выключаем прерывание, чтобы не словить мусор в процессе
+    // We disable interrupts to avoid catching garbage in the process
     _disable();
 
-    // Порт 0x43 — это Command Register (регистр управления) PIT.
-    // Запись байта в этот порт отправляет control word таймеру.
-    // По битам: выбор счётчика, порядок сначала младший байт, режим Mode 2, формат счётчика, 
-    // Биты      00 11 010 0 = 0x34
+    // Port 0x43 is the Command Register (control register) for PIT.
+    // Writing a byte to this port sends the control word to the timer.
+    // Bits: selector, order least significant byte, mode 2, counter format,
+    // Bits      00 11 010 0 = 0x34
     outp(0x43, 0x34);
 
-    // Порт 0x40 — регистр данных Counter 0.
-    // сначала младший байт (LSB) значения делителя.
+    // Port 0x40 is Counter 0 register.
+    // first the least significant byte (LSB) of the divisor value.
     outp(0x40, LOW_BYTE(divider));
     outp(0x40, HIGH_BYTE(divider));
 
-    // Включаем прерывания
+    // We enable interrupts
     _enable();
 }
 

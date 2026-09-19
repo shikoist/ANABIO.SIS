@@ -64,11 +64,11 @@ Mesh* someMesh;
 int field_size = 11;
 int field_size_half = 5;
 
-unsigned char *synth;
-unsigned char *upbeat;
-unsigned char *gunshot;
-unsigned char *door;
-unsigned char *explosion;
+// unsigned char *synth;
+// unsigned char *upbeat;
+// unsigned char *gunshot;
+// unsigned char *door;
+// unsigned char *explosion;
 
 int player_shoots = 0;
 int door_opened = 0;
@@ -83,23 +83,24 @@ float door_opened_time_rate = 0.7f;
 float explosion_happens_time = 0;
 float explosion_happens_time_rate = 1.0f;
 
-unsigned int synth_size, synth_rate, synth_channels;
-unsigned int upbeat_size, upbeat_rate, upbeat_channels;
-unsigned int gunshot_size, gunshot_rate, gunshot_channels;
-unsigned int door_size, door_rate, door_channels;
-unsigned int explosion_size, explosion_rate, explosion_channels;
+// unsigned int synth_size, synth_rate, synth_channels;
+// unsigned int upbeat_size, upbeat_rate, upbeat_channels;
+// unsigned int gunshot_size, gunshot_rate, gunshot_channels;
+// unsigned int door_size, door_rate, door_channels;
+// unsigned int explosion_size, explosion_rate, explosion_channels;
+
+Sound synth, upbeat, gunshot, door, explosion;
 
 int game_00_start() {
-   // Loading sounds (data already in memory)
-   synth =     load_wav("MUSIC/SYNTH.WAV", &synth_size, &synth_rate, &synth_channels);
-   upbeat =    load_wav("MUSIC/UPBEAT.WAV", &upbeat_size, &upbeat_rate, &upbeat_channels);
-   gunshot =   load_wav("SOUNDS/GUNSHOT.WAV", &gunshot_size, &gunshot_rate, &gunshot_channels);
-   door =      load_wav("SOUNDS/DOOR.WAV", &door_size, &door_rate, &door_channels);
-   explosion = load_wav("SOUNDS/EXPLODE.WAV", &explosion_size, &explosion_rate, &explosion_channels);
+   if (load_wav("MUSIC/SYNTH.WAV", &synth) != 0) return -1;
+   if (load_wav("MUSIC/UPBEAT.WAV", &upbeat) != 0) return -1;
+   if (load_wav("SOUNDS/GUNSHOT.WAV", &gunshot) != 0) return -1;
+   if (load_wav("SOUNDS/DOOR.WAV", &door) != 0) return -1;
+   if (load_wav("SOUNDS/EXPLODE.WAV", &explosion) != 0) return -1;
    
    //test_sound_generator();
    //test_stereo();
-   mixer_play_sound_ex(-1, synth, synth_size, synth_rate, 2, 1, 0);
+   mixer_play_sound_ex(-1, &synth, 1, 0);
 
    if (LoadTexture(someTextureName, &someTextureSlot, 0) != 0) {
       printf("Error loading %s\n", someTextureName);
@@ -249,44 +250,45 @@ int game_00_update() {
       dir = (int)(rand() % 255);
       //printf("dir = %d\n", dir);
       //mixer_play_sound(-1, gunshot, gunshot_size, gunshot_rate, 0, 0);
-      ch = mixer_play_sound_ex(-1, gunshot, gunshot_size, gunshot_rate,
-                        gunshot_channels, 0, 0);
+      ch = mixer_play_sound_ex(-1, &gunshot, 0, 0);
       if (ch >= 0) mixer_set_pan(ch, dir);   // 0 leftmost, 255 rightmost
       player_shoots = 0;
    }
 
    // Test sound 2 - door (KEY 2)
    if (door_opened) {
-      mixer_play_sound(-1, door, door_size, door_rate, 0, 1);
+      mixer_play_sound_ex(-1, &door, 0, 1);
       door_opened = 0;
    }
 
    // Test sound 3 - explosion (KEY 3)
    if (explosion_happens) {
-      mixer_play_sound(-1, explosion, explosion_size, explosion_rate, 0, 0);
+      mixer_play_sound_ex(-1, &explosion, 0, 0);
       explosion_happens = 0;
    }
-   
-   // Play music via DMA
-   // if (dma_block_finished_flag) {
-   //    //sb_copy_buffer();
-   //    swap_buffers();
-      
-   //    if (playing_final_chunk) {
-   //          is_playing = 0;
-   //    }
-
-   //    dma_block_finished_flag = 0;
-   //}
-   //delay(1);
-
    return 1;
 }
 
 int game_00_clear() {
+   int i;
+
    UnloadMesh(someMesh);
-   free(gunshot);
-   free(door);
-   free(explosion);
+
+   for (i = 0; i < MAX_STREAMS; i++) {
+      mixer_stop(i);
+      mixer_free_channel(i);
+   }
+
+   // free(gunshot.data);
+   // free(door.data);
+   // free(explosion.data);
+
+   // More safer
+   if (synth.data)    { free(synth.data);    synth.data = NULL; }
+   if (upbeat.data)   { free(upbeat.data);   upbeat.data = NULL; }
+   if (gunshot.data)  { free(gunshot.data);  gunshot.data = NULL; }
+   if (door.data)     { free(door.data);     door.data = NULL; }
+   if (explosion.data){ free(explosion.data);explosion.data = NULL; }
+
    return 1;
 }
