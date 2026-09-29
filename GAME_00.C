@@ -221,14 +221,14 @@ int game_00_update() {
    //    0, 0, 0,
    //    4.0f, 4.0f, 4.0f);
 
-   for (a = 0; a < field_size; a++) {
-      for (b = 0; b < field_size; b++) {
-         DrawMesh(someMesh, &someTextureSlot,
-            (a - field_size_half) * 4, 0.0f, (b - field_size_half) * 3,
-            angleX, angleY, angleZ,
-            1.0f, 1.0f, 1.0f);
-      }  
-   }
+   // for (a = 0; a < field_size; a++) {
+   //    for (b = 0; b < field_size; b++) {
+   //       DrawMesh(someMesh, &someTextureSlot,
+   //          (a - field_size_half) * 4, 0.0f, (b - field_size_half) * 3,
+   //          angleX, angleY, angleZ,
+   //          1.0f, 1.0f, 1.0f);
+   //    }  
+   // }
 
    // DrawMesh(someMesh, &someTextureSlot,
    //    1.0f, 0.0f, 1.0f,

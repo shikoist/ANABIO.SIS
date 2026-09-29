@@ -23,6 +23,7 @@
 
 #include "mesh.h"
 #include "keyboard.h"
+#include "MOUSE.H"
 #include "camera.h"
 #include "timer.h"
 #include "file.h"
@@ -74,6 +75,7 @@ int safe_shutdown() {
    grGlideShutdown();
    timer_shutdown();
    keyboard_shutdown();
+   mouse_shutdown();
    sb_stop_playback();
    //sb_cleanup();
    cleanup_buffers();
@@ -127,6 +129,7 @@ int main()
    printf("New Timer frequency: %.2f Hz\n", frequency);
    
    keyboard_init(); puts("keyboard_init()");
+   mouse_init(); puts("mouse_init()");
    timer_init(); puts("timer_init()");
 
    prev_ticks = dos_time;
@@ -219,9 +222,10 @@ int main()
    //game_01_start();
 
    // Main rendering loop
-   while (1)
-   {
+   while (1) {
       mixer_process();
+
+      mouse_update();
 
       triangles_drawn = 0;
 
@@ -266,10 +270,18 @@ int main()
       DrawTextF(&fpsFont, 8.0f, 8, COLOR_WHITE, "ANABIO.SIS BY SHIKOIST build %d", build);
       DrawText(&fpsFont, 8.0f, 8 + 16, COLOR_MAGENTA, fpsString);
       DrawTextF(&fpsFont, 320.0f, 8 + 16, COLOR_MAGENTA, "TIME: %.2f", local_time);
-      DrawTextF(&fpsFont, 8.0f, 8 + 16*2, COLOR_MAGENTA, "Cam Pos: %.1f %.1f %.1f", camera.pos_x, camera.pos_y,camera.pos_z);
-      DrawTextF(&fpsFont, 8.0f, 8 + 16*3, COLOR_MAGENTA, "Triangles: %d (%d/sec)", triangles_drawn, triangles_drawn * (int)(1.0f / delta_time));
-      DrawTextF(&fpsFont, 8.0f, 8 + 16*4, COLOR_MAGENTA, "irqs: %d | status: %d | read: %d", counter, irq_debug_last_status, irq_debug_read_data);
+      DrawTextF(&fpsFont, 8.0f, 8 + 16*2, COLOR_MAGENTA, 
+         "Cam Pos: %.1f %.1f %.1f", camera.pos_x, camera.pos_y,camera.pos_z);
+      DrawTextF(&fpsFont, 8.0f, 8 + 16*3, COLOR_MAGENTA, 
+         "Triangles: %d (%d/sec)", triangles_drawn, triangles_drawn * (int)(1.0f / delta_time));
+      DrawTextF(&fpsFont, 8.0f, 8 + 16*4, COLOR_MAGENTA, 
+         "irqs: %d | status: %d | read: %d", counter, irq_debug_last_status, irq_debug_read_data);
+      DrawTextF(&fpsFont, 8.0f, 8 + 16*5, COLOR_YELLOW, 
+         "Mouse: %d | x: %d | y: %d", mouse.visible, mouse.x, mouse.y);
 
+      // Mouse?!
+      // Draw a simple cross at the mouse position (to see that the coordinates are live)
+      if (mouse.available) DrawTextF(&fpsFont, (float)mouse.x - 4, (float)mouse.y - 8, COLOR_WHITE, "+"); 
 
       //grSstIdle();
       grBufferSwap(0);
