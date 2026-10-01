@@ -15,14 +15,17 @@ static const char fontString[] = " ! #$%& ()*+,-./0123456789:;<=>?@ABCDEFGHIJKLM
 
 int LoadFont(const char* filename, Font* font)
 {
-    TextureSlot slot;
+    Texture texture;
     int i;
 
-    if (LoadTexture(filename, &slot, 0) != 0)
+    texture.tmu = 0;
+    //strncpy(&texture.filename, filename, sizeof(filename));
+
+    if (LoadTexture(filename, &texture) != 0)
         return -1;
 
-    font->grTexInfo = slot.grTexInfo;
-    font->baseAddr  = slot.baseAddr;
+    font->grTexInfo = texture.grTexInfo;
+    font->baseAddr  = texture.baseAddr;
     font->charW     = 16;
     font->charH     = 16;
     font->texW      = 256.0f;

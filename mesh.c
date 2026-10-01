@@ -18,23 +18,16 @@
 #include "glide.h"
 
 static GrVertex tempVtx[MAX_VERTICES];
-    //GrVertex screen[3]; // Экранный треугольник
-static GrVertex screen[3]; // Только для одного треугольника
+static GrVertex screen[3]; // Buffer for only one triangle
 int triangles_drawn;
 
-inline float eval_plane_value(GrVertex v, float* plane) {
+// On which side is the vertex located
+float eval_plane_value(GrVertex v, float* plane) {
     return plane[0] * v.x + plane[1] * v.y + plane[2] * v.z + plane[3];
 }
 
-// Клиппинг треугольника по произвольной плоскости
-int ClipTriangleByPlane(
-    GrVertex* output,                    // массив для выходных треугольников (макс 8*3 вершин)
-    GrVertex* v1,                  // вершина 1
-    GrVertex* v2,                  // вершина 2
-    GrVertex* v3,                  // вершина 3
-    float* plane,                  // [a, b, c, d]
-    int max_output_vertices              // размер выходного буфера (должен быть >= 24)
-) {
+// Clipping triangle against a generic plane
+int ClipTriangleByPlaneOld(GrVertex* output, GrVertex* v1, GrVertex* v2, GrVertex* v3, float* plane, int max_output_vertices) {
     GrVertex verts[MAX_CLIP_VERTICES];
     GrVertex input[3];
     GrVertex outputVerts[MAX_CLIP_VERTICES];
@@ -180,15 +173,61 @@ int ClipTriangleByPlane(
     return 0;
 }
 
-/*  Дроп треугольника по произвольной плоскости,
-    возвращает 1, если возвращается исхожный,
-    0 если дропается */
-int DropTriangleByPlane(
-    GrVertex* v1,                  // вершина 1
-    GrVertex* v2,                  // вершина 2
-    GrVertex* v3,                  // вершина 3
-    float* plane
-) {
+// Clip any polygon to a plane
+int ClipPolygonByPlane(GrVertex* output, GrVertex* input, int num_verts, float* plane, int max_output) {
+    int i, out_n = 0;
+    float d_prev, d_cur;
+
+    // проверка входа и выхода
+    // если меньше трёх (не треугольник), возвращаем 0
+    if (num_verts < 3 || max_output < 3) return 0; 
+
+    // Знак говорит, с какой стороны плоскости вершина:
+    // >= 0 — внутри (та сторона, куда смотрит нормаль),
+    // < 0 — снаружи.
+    d_prev = eval_plane_value(input[num_verts - 1], plane);
+
+    // Идём по вершинам полигона. 
+    // На каждой итерации обрабатываем ребро 
+    // (input[i-1], input[i]), где input[i-1] — 
+    // это та вершина, на которой мы остановились в прошлый раз 
+    // (её расстояние хранится в d_prev). 
+    // После обработки сдвигаем d_prev = d_cur, 
+    // чтобы следующая итерация работала с новым ребром.
+    for (i = 0; i < num_verts; i++) {
+        d_cur = eval_plane_value(input[i], plane);
+
+        // Если вершина внутри
+        if (d_cur >= 0.0f) {
+            
+            if (d_prev < 0.0f) {
+                // ...и предыдущая снаружи — добавляем пересечение
+                float t = d_prev / (d_prev - d_cur);
+                if (out_n >= max_output) return 0;
+                InterpolateVertex3D(&output[out_n++], 
+                                    &input[(i + num_verts - 1) % num_verts],
+                                    &input[i], t);
+            }
+            if (out_n >= max_output) return 0;
+            memcpy(&output[out_n++], &input[i], sizeof(GrVertex));
+        } else {
+            // Текущая снаружи
+            if (d_prev >= 0.0f) {
+                // ...а предыдущая внутри — добавляем пересечение
+                float t = d_prev / (d_prev - d_cur);
+                if (out_n >= max_output) return 0;
+                InterpolateVertex3D(&output[out_n++],
+                                    &input[(i + num_verts - 1) % num_verts],
+                                    &input[i], t);
+            }
+        }
+        d_prev = d_cur;
+    }
+    return out_n;
+}
+
+// Drop of the triangle on an arbitrary plane
+int DropTriangleByPlane(GrVertex* v1, GrVertex* v2, GrVertex* v3, float* plane) {
     // Собираем массив из входных вершин
     GrVertex input[3];
     
@@ -224,55 +263,41 @@ int DropTriangleByPlane(
     return 0;
 }
 
-// Полный клиппинг треугольника по frustum
-// Возвращает количество треугольников (0 - до 8)
-int ClipTriangleByFrustum(
-    GrVertex* output,                    // буфер для выходных треугольников
-    GrVertex* v1,                  // вершина 1
-    GrVertex* v2,                  // вершина 2
-    GrVertex* v3,                  // вершина 3
-    FrustumPlanes* planes,         // плоскости frustum
-    int max_output_vertices              // размер буфера (должен быть >= 24)
-) {
+// Full frustum clipping triangle
+int ClipTriangleByFrustumOld(GrVertex* output, GrVertex* v1, GrVertex* v2, GrVertex* v3, FrustumPlanes* planes, int max_output_vertices) {
     // Применяем клиппинг по каждой плоскости
     float planes_list[6][4];
-
     GrVertex temp_buffer1[24];  // достаточно для 8 треугольников
     GrVertex temp_buffer2[24];
     int num_tris = 1;
     int current_buffer = 0;
     int i, p;
-    
     memcpy(planes_list[0], planes->near_plane, 4 * sizeof(float));
     memcpy(planes_list[1], planes->left_plane, 4 * sizeof(float));
     memcpy(planes_list[2], planes->right_plane, 4 * sizeof(float));
     memcpy(planes_list[3], planes->bottom_plane, 4 * sizeof(float));
     memcpy(planes_list[4], planes->top_plane, 4 * sizeof(float));
     memcpy(planes_list[5], planes->far_plane, 4 * sizeof(float));
-    
     // Начинаем с одного треугольника
     memcpy(temp_buffer1, v1, sizeof(GrVertex));
     memcpy(temp_buffer1 + 1, v2, sizeof(GrVertex));
     memcpy(temp_buffer1 + 2, v3, sizeof(GrVertex));
-    
     for (p = 0; p < 6; p++) {
     //for (p = 0; p < 1; p++) {
         //if (p != 5) {
-        //if (p == 5) {
-        if (1) {
+        if (p == 5) {
+        //if (1) {
             int input_tris = num_tris;
             int out_count = 0;
             int t;
             //num_tris = 0;
-            
             for (t = 0; t < input_tris; t++) {
                 GrVertex* src = (current_buffer == 0) ? temp_buffer1 : temp_buffer2;
                 GrVertex* dst = (current_buffer == 0) ? temp_buffer2 : temp_buffer1;
                 int idx = t * 3;
                 int num_clipped;
-                
                 // Клиппим треугольник по текущей плоскости
-                num_clipped = ClipTriangleByPlane(
+                num_clipped = ClipTriangleByPlaneOld(
                     //dst + num_tris * 3,
                     dst + out_count * 3,
                     &src[idx], &src[idx+1], &src[idx+2],
@@ -280,25 +305,21 @@ int ClipTriangleByFrustum(
                     //24 - num_tris * 3
                     24 - out_count * 3
                 );
-
                 out_count += num_clipped;
-                
                 // Если слишком много треугольников - прерываем
                 if (out_count > MAX_OUTPUT_TRIANGLES) {
                     out_count = MAX_OUTPUT_TRIANGLES;
                     break;
                 }
             }
-        
             // Переключаем буфер для следующей плоскости
             num_tris = out_count;
             current_buffer = 1 - current_buffer;
-            
             // Если нет треугольников - выходим
             if (num_tris == 0) break;
         }
     }
-    
+    //return 0;
     // Копируем результат в выходной буфер
     if (num_tris > 0) {
         GrVertex* src = (current_buffer == 0) ? temp_buffer1 : temp_buffer2;
@@ -309,18 +330,60 @@ int ClipTriangleByFrustum(
             num_tris = 0;
         }
     }
-    
     return num_tris;
 }
 
-// Полный дроп треугольника по frustum
-// Возвращает количество треугольников (0 - до 8)
-int DropTriangleByFrustum(
-    GrVertex* v1,                  // вершина 1
-    GrVertex* v2,                  // вершина 2
-    GrVertex* v3,                  // вершина 3
-    FrustumPlanes* planes
-) {
+int ClipTriangleByFrustum(GrVertex* output, GrVertex* v1, GrVertex* v2, GrVertex* v3, FrustumPlanes* planes, int max_output_vertices) {
+    // Достаточно буфера на 3 вершины на входе
+    // и 4 на выходе за одну плоскость (треугольник + 1 точка = 4)
+    // Но для 6 плоскостей накапливается — держим 3+3+1 с запасом.
+    GrVertex buf_a[8], buf_b[8];
+    GrVertex* src = buf_a;
+    GrVertex* dst = buf_b;
+    GrVertex* tmp;
+    int num = 3;
+    float* planes_list[6];
+    int p;
+    int num_tris;
+
+    // near, left, right, bottom, top, far
+    planes_list[0] = planes->near_plane;
+    planes_list[1] = planes->left_plane;
+    planes_list[2] = planes->right_plane;
+    planes_list[3] = planes->bottom_plane;
+    planes_list[4] = planes->top_plane;
+    planes_list[5] = planes->far_plane;
+
+    memcpy(buf_a, v1, sizeof(GrVertex));
+    memcpy(buf_a + 1, v2, sizeof(GrVertex));
+    memcpy(buf_a + 2, v3, sizeof(GrVertex));
+
+    for (p = 0; p < 6; p++) {
+        //if (p == 0)
+        if (1)
+        {
+            num = ClipPolygonByPlane(dst, src, num, planes_list[p], 8);
+            if (num < 3) return 0;      // всё снаружи — треугольник невидим
+            // swap
+            tmp = src; src = dst; dst = tmp;
+        }
+    }
+
+    // После 6 итераций результат лежит в src (мы свапнули в конце)
+    // Триангуляция веером: (0,1,2), (0,2,3), ...
+    num_tris = num - 2;
+    if (num_tris * 3 > max_output_vertices) return 0;
+
+    for (p = 0; p < num_tris; p++) {
+        memcpy(output + p * 3 + 0, &src[0],   sizeof(GrVertex));
+        memcpy(output + p * 3 + 1, &src[p+1], sizeof(GrVertex));
+        memcpy(output + p * 3 + 2, &src[p+2], sizeof(GrVertex));
+    }
+    return num_tris;
+}
+
+// Triangle drop by frustum
+int DropTriangleByFrustum(GrVertex* v1, GrVertex* v2, GrVertex* v3, FrustumPlanes* planes) {
     // Применяем клиппинг по каждой плоскости
     float planes_list[6][4];
 
@@ -344,17 +407,13 @@ int DropTriangleByFrustum(
     return dropped;
 }
 
-
-// Копирование вершины
-static void CopyVertex3D(GrVertex* dest, GrVertex* src) {
+// Copying the vertex
+void CopyVertex3D(GrVertex* dest, GrVertex* src) {
     memcpy(dest, src, sizeof(GrVertex));
 }
 
-// Интерполяция вершины для клиппинга
-static void InterpolateVertex3D(GrVertex* out, 
-                                GrVertex* v1, 
-                                GrVertex* v2, 
-                                float t) {
+// Interpolation of the vertex for clipping
+void InterpolateVertex3D(GrVertex* out, GrVertex* v1, GrVertex* v2, float t) {
     int i;
 
     out->x = v1->x + t * (v2->x - v1->x);
@@ -749,144 +808,287 @@ void UnloadMesh(Mesh* mesh)
     mesh = NULL;
 }
 
-// void DrawMesh2(Mesh* mesh, TextureSlot* texture,
-//     float pos_x, float pos_y, float pos_z,
-//     float rot_x, float rot_y, float rot_z,
-//     float scale_x, float scale_y, float scale_z) {
-//     GrState grState;
-//     int i, j, t;
-//     float model[16];
-//     float proj[16];
-//     float mvp[16];
-//     GrVertex tempVtx[MAX_VERTICES];
-//     GrVertex clipSpaceVerts[MAX_VERTICES];  // Вершины в Clip Space (до деления)
-//     FrustumPlanes frustum;
-//     GrVertex clipped_verts[24];
-//     int num_tris;
-//     if (!mesh || !mesh->grVertices) return;
-//     grGlideGetState(&grState);
-//     // Настройка текстурного состояния (как было)
-//     if (camera.wireframe_mode == 1) {
-//         grTexCombine(GR_TMU0,
-//              GR_COMBINE_FUNCTION_LOCAL,
-//              GR_COMBINE_FACTOR_LOCAL,
-//              GR_COMBINE_FUNCTION_LOCAL,
-//              GR_COMBINE_OTHER_NONE,
-//              FXFALSE, FXFALSE);
-//         grColorCombine(
-//             GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_ONE,
-//             GR_COMBINE_LOCAL_NONE, GR_COMBINE_OTHER_ITERATED,
-//             FXFALSE );
-//     }
-//     else {
-//         grTexCombine(
-//             GR_TMU0,
-//             GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,
-//             GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,
-//             FXFALSE, FXFALSE);
-//         grColorCombine(
-//             GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_LOCAL,
-//             GR_COMBINE_LOCAL_CONSTANT, GR_COMBINE_OTHER_TEXTURE,
-//             FXFALSE );
-//         grTexSource(texture->tmu,
-//             texture->baseAddr,
-//             GR_MIPMAPLEVELMASK_BOTH,
-//             &texture->grTexInfo);
-//     }
-//     // Строим матрицы
-//     MatrixIdentity(model);
-//     MatrixEulerRotation(model, rot_x, rot_y, rot_z);
-//     MatrixTranslation(model, pos_x, pos_y, pos_z);
-//     MatrixScale(model, scale_x, scale_y, scale_z);
-//     MatrixIdentity(proj);
-//     MatrixProjection(proj,
-//         camera.fov,
-//         camera.aspect,
-//         camera.near_clip,
-//         camera.far_clip);
-//     // Извлекаем плоскости frustum из матрицы проекции
-//     ExtractFrustumPlanes(&frustum, proj);
-//     MatrixIdentity(mvp);
-//     MatrixMultiply(mvp, mvp, model);
-//     MatrixMultiply(mvp, mvp, view);
-//     MatrixMultiply(mvp, mvp, proj);
-//     // Копируем вершины модели
-//     memcpy(tempVtx, mesh->grVertices, mesh->num_vertices * sizeof(GrVertex));
-//     // ПРИМЕНЯЕМ MVP, НО НЕ ДЕЛАЕМ ПЕРСПЕКТИВНОЕ ДЕЛЕНИЕ!
-//     for (i = 0; i < mesh->num_vertices; i++) {
-//         // Сохраняем оригинальные текстурные координаты
-//         float orig_s = tempVtx[i].tmuvtx[0].sow;
-//         float orig_t = tempVtx[i].tmuvtx[0].tow;
-//         // Применяем матрицу (это даст нам Clip Space координаты)
-//         ApplyMatrix(&tempVtx[i], mvp);
-//         // Сохраняем в отдельный буфер для клиппинга
-//         memcpy(&clipSpaceVerts[i], &tempVtx[i], sizeof(GrVertex));
-//         // Восстанавливаем оригинальные текстурные координаты (до умножения на oow)
-//         // Они нам понадобятся для клиппинга
-//         clipSpaceVerts[i].tmuvtx[0].sow = orig_s;
-//         clipSpaceVerts[i].tmuvtx[0].tow = orig_t;
-//     }
-//     // Рисуем треугольники с клиппингом в Clip Space
-//     for (i = 0; i < mesh->num_faces * 3; i += 3) {
-//         int idx1 = mesh->indices_vertices[i];
-//         int idx2 = mesh->indices_vertices[i+1];
-//         int idx3 = mesh->indices_vertices[i+2];
-//         GrVertex* v1 = &clipSpaceVerts[idx1];
-//         GrVertex* v2 = &clipSpaceVerts[idx2];
-//         GrVertex* v3 = &clipSpaceVerts[idx3];
-//         // Проверка: все ли вершины за near plane?
-//         if (v1->z < camera.near_clip && 
-//             v2->z < camera.near_clip && 
-//             v3->z < camera.near_clip) {
-//             continue; // Полностью невидим
-//         }
-//         // Клиппинг по всем плоскостям frustum (в Clip Space)
-//         num_tris = ClipTriangleByFrustum(
-//             clipped_verts,
-//             v1, v2, v3,
-//             &frustum,
-//             24
-//         );
-//         if (num_tris == 0) {
-//     // Проверяем, почему треугольник отброшен
-//     printf("Tri clipped: v1=(%.2f,%.2f,%.2f,%.2f) v2=(%.2f,%.2f,%.2f,%.2f) v3=(%.2f,%.2f,%.2f,%.2f)\n",
-//         v1->x, v1->y, v1->z, v1->oow,
-//         v2->x, v2->y, v2->z, v2->oow,
-//         v3->x, v3->y, v3->z, v3->oow);
-// }
-// return ;
-//         // Рендерим полученные треугольники
-//         for (t = 0; t < num_tris; t++) {
-//             GrVertex* tri = &clipped_verts[t * 3];
-//             GrVertex screen[3];
-//             // Для каждой вершины делаем перспективное деление и переход в экранные координаты
-//             for (j = 0; j < 3; j++) {
-//                 // Сначала умножаем текстурные координаты на oow и размер текстуры
-//                 tri[j].tmuvtx[0].sow *= tri[j].oow * texture->width;
-//                 tri[j].tmuvtx[0].tow *= tri[j].oow * texture->height;
-//                 // Теперь перспективное деление и экранные координаты
-//                 VertexToScreen(&tri[j], &screen[j]);
-//             }
-//             // Проверяем валидность и рисуем
-//             if (screen[0].oow > 0 && screen[1].oow > 0 && screen[2].oow > 0) {
-//                 if (camera.wireframe_mode == 0) {
-//                     guAADrawTriangleWithClip(&screen[0], &screen[1], &screen[2]);
-//                 } else {
-//                     grConstantColorValue(0xFFFFFFFF);
-//                     grAADrawLine(&screen[0], &screen[1]);
-//                     grAADrawLine(&screen[1], &screen[2]);
-//                     grAADrawLine(&screen[2], &screen[0]);
-//                 }
-//             }
-//         }
-//     }
-//     grGlideSetState(&grState);
-// }
+// Old version
+void DrawMeshWithClipOld(Mesh* mesh, Texture* texture, float pos_x, float pos_y, float pos_z, float rot_x, float rot_y, float rot_z, float scale_x, float scale_y, float scale_z) {
+    GrState grState;
+    int i, j, t;
+    float model[16];
+    float proj[16];
+    float mvp[16];
+    GrVertex tempVtx[MAX_VERTICES];
+    GrVertex clipSpaceVerts[MAX_VERTICES];  // Вершины в Clip Space (до деления)
+    GrVertex clipped_verts[24];
+    int num_tris;
+    if (!mesh || !mesh->grVertices) return;
+    grGlideGetState(&grState);
+    // Настройка текстурного состояния (как было)
+    if (camera.wireframe_mode == 1) {
+        grTexCombine(GR_TMU0,
+             GR_COMBINE_FUNCTION_LOCAL,
+             GR_COMBINE_FACTOR_LOCAL,
+             GR_COMBINE_FUNCTION_LOCAL,
+             GR_COMBINE_OTHER_NONE,
+             FXFALSE, FXFALSE);
+        grColorCombine(
+            GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_ONE,
+            GR_COMBINE_LOCAL_NONE, GR_COMBINE_OTHER_ITERATED,
+            FXFALSE );
+    }
+    else {
+        grTexCombine(
+            GR_TMU0,
+            GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,
+            GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,
+            FXFALSE, FXFALSE);
+        grColorCombine(
+            GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_LOCAL,
+            GR_COMBINE_LOCAL_CONSTANT, GR_COMBINE_OTHER_TEXTURE,
+            FXFALSE );
+        grTexSource(texture->tmu,
+            texture->baseAddr,
+            GR_MIPMAPLEVELMASK_BOTH,
+            &texture->grTexInfo);
+    }
+    // Строим матрицы
+    MatrixIdentity(model);
+    MatrixEulerRotation(model, rot_x, rot_y, rot_z);
+    MatrixTranslation(model, pos_x, pos_y, pos_z);
+    MatrixScale(model, scale_x, scale_y, scale_z);
+    //return;
+    //MatrixIdentity(proj);
+    // MatrixProjection(proj,
+    //     camera.fov,
+    //     camera.aspect,
+    //     camera.near_clip,
+    //     camera.far_clip);
+    // Извлекаем плоскости frustum из матрицы проекции
+    //ExtractFrustumPlanes(&frustum, proj);
+    MatrixIdentity(mvp);
+    MatrixMultiply(mvp, mvp, model);
+    MatrixMultiply(mvp, mvp, view);
+    MatrixMultiply(mvp, mvp, proj);
+    // Копируем вершины модели
+    memcpy(tempVtx, mesh->grVertices, mesh->num_vertices * sizeof(GrVertex));
+    // ПРИМЕНЯЕМ MVP, НО НЕ ДЕЛАЕМ ПЕРСПЕКТИВНОЕ ДЕЛЕНИЕ!
+    for (i = 0; i < mesh->num_vertices; i++) {
+        // Сохраняем оригинальные текстурные координаты
+        float orig_s = tempVtx[i].tmuvtx[0].sow;
+        float orig_t = tempVtx[i].tmuvtx[0].tow;
+        // Применяем матрицу (это даст нам Clip Space координаты)
+        ApplyMatrix(&tempVtx[i], mvp);
+        // Сохраняем в отдельный буфер для клиппинга
+        memcpy(&clipSpaceVerts[i], &tempVtx[i], sizeof(GrVertex));
+        // Восстанавливаем оригинальные текстурные координаты (до умножения на oow)
+        // Они нам понадобятся для клиппинга
+        clipSpaceVerts[i].tmuvtx[0].sow = orig_s;
+        clipSpaceVerts[i].tmuvtx[0].tow = orig_t;
+    }
+    //return;
+    // Рисуем треугольники с клиппингом в Clip Space
+    for (i = 0; i < mesh->num_faces * 3; i += 3) {
+        int idx1 = mesh->indices_vertices[i];
+        int idx2 = mesh->indices_vertices[i+1];
+        int idx3 = mesh->indices_vertices[i+2];
+        GrVertex* v1 = &clipSpaceVerts[idx1];
+        GrVertex* v2 = &clipSpaceVerts[idx2];
+        GrVertex* v3 = &clipSpaceVerts[idx3];
+        // Проверка: все ли вершины за near plane?
+        if (v1->z < camera.near_clip && 
+            v2->z < camera.near_clip && 
+            v3->z < camera.near_clip) {
+            continue; // Полностью невидим
+        }
+        //return;
+        // Клиппинг по всем плоскостям frustum (в Clip Space)
+        num_tris = ClipTriangleByFrustum(
+            clipped_verts,
+            v1, v2, v3,
+            &frustum,
+            24
+        );
+        //return;
+        if (num_tris > 0) {
+            // Проверяем, почему треугольник отброшен
+            printf("Tri clipped: v1=(%.2f,%.2f,%.2f,%.2f) v2=(%.2f,%.2f,%.2f,%.2f) v3=(%.2f,%.2f,%.2f,%.2f)\n",
+                v1->x, v1->y, v1->z, v1->oow,
+                v2->x, v2->y, v2->z, v2->oow,
+                v3->x, v3->y, v3->z, v3->oow);
+        }
+        //return;
+        // Рендерим полученные треугольники
+        for (t = 0; t < num_tris; t++) {
+            GrVertex* tri = &clipped_verts[t * 3];
+            GrVertex screen[3];
+            // Для каждой вершины делаем перспективное деление и переход в экранные координаты
+            for (j = 0; j < 3; j++) {
+                // Сначала умножаем текстурные координаты на oow и размер текстуры
+                tri[j].tmuvtx[0].sow *= tri[j].oow * texture->width;
+                tri[j].tmuvtx[0].tow *= tri[j].oow * texture->height;
+                // Теперь перспективное деление и экранные координаты
+                VertexToScreen(&tri[j], &screen[j]);
+            }
+            // Проверяем валидность и рисуем
+            if (screen[0].oow > 0 && screen[1].oow > 0 && screen[2].oow > 0) {
+                if (camera.wireframe_mode == 0) {
+                    //guAADrawTriangleWithClip(&screen[0], &screen[1], &screen[2]);
+                    grDrawTriangle(&screen[0], &screen[1], &screen[2]);
+                    triangles_drawn++;
+                } else {
+                    grConstantColorValue(0xFFFFFFFF);
+                    grAADrawLine(&screen[0], &screen[1]);
+                    grAADrawLine(&screen[1], &screen[2]);
+                    grAADrawLine(&screen[2], &screen[0]);
+                }
+            }
+        }
+    }
+    grGlideSetState(&grState);
+}
 
-void DrawMesh(Mesh* mesh, TextureSlot* texture,
-    float pos_x, float pos_y, float pos_z,
-    float rot_x, float rot_y, float rot_z,
-    float scale_x, float scale_y, float scale_z) {
+void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, float pos_z, float rot_x, float rot_y, float rot_z, float scale_x, float scale_y, float scale_z) {
+    GrState grState;
+    int i, j, t;
+    float model[16];
+    float mv[16];              // Model * View — БЕЗ проекции
+    GrVertex viewVerts[MAX_VERTICES];   // вершины в view-space
+    GrVertex clipped[24];
+    int num_tris;
+
+    if (!mesh || !mesh->grVertices) return;
+
+    grGlideGetState(&grState);
+
+    // --- текстурное состояние (без изменений) ---
+    if (camera.wireframe_mode == 1) {
+        grTexCombine(GR_TMU0,
+            GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_LOCAL,
+            GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_OTHER_NONE,
+            FXFALSE, FXFALSE);
+        grColorCombine(
+            GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_ONE,
+            GR_COMBINE_LOCAL_NONE, GR_COMBINE_OTHER_ITERATED,
+            FXFALSE);
+    } else {
+        grTexCombine(GR_TMU0,
+            GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,
+            GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,
+            FXFALSE, FXFALSE);
+        grColorCombine(
+            GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_LOCAL,
+            GR_COMBINE_LOCAL_CONSTANT, GR_COMBINE_OTHER_TEXTURE,
+            FXFALSE);
+        grTexSource(texture->tmu, texture->baseAddr,
+                    GR_MIPMAPLEVELMASK_BOTH, &texture->grTexInfo);
+    }
+
+    // --- матрицы: только Model * View ---
+    MatrixIdentity(model);
+    MatrixEulerRotation(model, rot_x, rot_y, rot_z);
+    MatrixTranslation(model, pos_x, pos_y, pos_z);
+    MatrixScale(model, scale_x, scale_y, scale_z);
+
+    MatrixIdentity(mv);
+    MatrixMultiply(mv, mv, model);
+    MatrixMultiply(mv, mv, view);
+
+    // --- трансформация вершин в view-space ---
+    memcpy(viewVerts, mesh->grVertices,
+           mesh->num_vertices * sizeof(GrVertex));
+
+    for (i = 0; i < mesh->num_vertices; i++) {
+        // ApplyMatrix делит на W. В view-space W=1, так что деления нет.
+        ApplyMatrix(&viewVerts[i], mv);
+        // ApplyMatrix выставит oow = 1.0 для view-space — это нормально,
+        // нам нужен oow только для текстурных координат позже.
+        viewVerts[i].oow = 1.0f;
+    }
+
+    // --- клиппинг и отрисовка ---
+    for (i = 0; i < mesh->num_faces * 3; i += 3) {
+        int idx1 = mesh->indices_vertices[i];
+        int idx2 = mesh->indices_vertices[i+1];
+        int idx3 = mesh->indices_vertices[i+2];
+        GrVertex* v1 = &viewVerts[idx1];
+        GrVertex* v2 = &viewVerts[idx2];
+        GrVertex* v3 = &viewVerts[idx3];
+        
+        // Быстрый reject: все три вершины за near-плоскостью
+        // (в view-space near_plane имеет нормаль (0,0,1) и d=-near)
+        float d1 = eval_plane_value(*v1, frustum.near_plane);
+        float d2 = eval_plane_value(*v2, frustum.near_plane);
+        float d3 = eval_plane_value(*v3, frustum.near_plane);
+        if (d1 < 0.0f && d2 < 0.0f && d3 < 0.0f) continue;
+
+        num_tris = ClipTriangleByFrustum(clipped, v1, v2, v3,
+                                         &frustum, 24);
+        if (num_tris <= 0) continue;
+
+        // --- отрисовка каждого клипленного треугольника ---
+        for (t = 0; t < num_tris; t++) {
+            GrVertex* tri = &clipped[t * 3];
+            GrVertex screen[3];
+            int ok = 1;
+
+            for (j = 0; j < 3; j++) {
+
+                GrVertex clip;
+
+                // NaN / Inf фильтр ДО любых преобразований
+                if (!(tri[j].x == tri[j].x) ||   // isnan
+                    !(tri[j].y == tri[j].y) ||
+                    !(tri[j].z == tri[j].z) ||
+                    !(tri[j].oow == tri[j].oow) ||
+                    !(tri[j].tmuvtx[0].sow == tri[j].tmuvtx[0].sow) ||
+                    !(tri[j].tmuvtx[0].tow == tri[j].tmuvtx[0].tow)) {
+                    ok = 0; break;
+                }
+
+                // Проекция view-space -> clip-space -> screen
+                // Применяем только projection, потом перспективное деление
+                clip = tri[j];
+                //CopyVertex3D(&clip, &tri[j]);
+                ApplyMatrix(&clip, proj);   // даст x/w, y/w, z/w и oow=1/w
+
+                // Теперь clip.x и clip.y уже поделены на w.
+                // Для Glide нужны экранные координаты + oow для W-буфера.
+                screen[j].x    = X_TO_SCREEN(clip.x, SCREEN_WIDTH);
+                screen[j].y    = Y_TO_SCREEN(clip.y, SCREEN_HEIGHT);
+                screen[j].z    = clip.z;
+                screen[j].oow  = clip.oow;   // 1/w для Glide
+                screen[j].ooz  = clip.ooz;
+                screen[j].r    = tri[j].r;
+                screen[j].g    = tri[j].g;
+                screen[j].b    = tri[j].b;
+                screen[j].a    = tri[j].a;
+
+                // Текстурные координаты: s/w, t/w, умноженные на размер текстуры
+                screen[j].tmuvtx[0].sow =
+                    tri[j].tmuvtx[0].sow * clip.oow * texture->width;
+                screen[j].tmuvtx[0].tow =
+                    tri[j].tmuvtx[0].tow * clip.oow * texture->height;
+                screen[j].tmuvtx[0].oow = clip.oow;
+
+                if (screen[j].oow <= 0.0f) { ok = 0; break; }
+            }
+
+            if (!ok) continue;
+
+            if (camera.wireframe_mode == 0) {
+                grDrawTriangle(&screen[0], &screen[1], &screen[2]);
+                triangles_drawn++;
+            } else {
+                grConstantColorValue(0xFFFFFFFF);
+                grAADrawLine(&screen[0], &screen[1]);
+                grAADrawLine(&screen[1], &screen[2]);
+                grAADrawLine(&screen[2], &screen[0]);
+            }
+        }
+    }
+
+    grGlideSetState(&grState);
+}
+
+void DrawMeshWithDrop(Mesh* mesh, Texture* texture, float pos_x, float pos_y, float pos_z, float rot_x, float rot_y, float rot_z, float scale_x, float scale_y, float scale_z) {
     
     GrState grState;
     int i, j;
@@ -1135,3 +1337,4 @@ void DrawMesh(Mesh* mesh, TextureSlot* texture,
     //free(tempVtx);
     //free(screen);
 }
+

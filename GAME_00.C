@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 #include "MESH.H"
@@ -19,8 +20,8 @@
 
 #define TEXTURE_DATA_SIZE  131072
 
-TextureSlot someTextureSlot;
-char someTextureName[] = "TEXTURES\\TEST.3DF";
+Texture testTexture;
+//char someTextureName[] = "TEXTURES\\TEST.3DF";
 //char ebakotModelName[] = "MODELS\\SPHERE.OBJ";
 //char someModelName[] = "MODELS\\SKYBOX.OBJ";
 //char someModelName[] = "MODELS\\PLANE.OBJ";
@@ -33,19 +34,16 @@ float moveZ_plus = 0.1f;
 
 int current_texture = 0;
 
-int i, j, a, b;
+//int i, j, a, b;
 
-
-
-
-unsigned long frame_ticks_before;
-unsigned long frame_ticks_after;
+//unsigned long frame_ticks_before;
+//unsigned long frame_ticks_after;
 
 FxU32 max_tmu_memory[MAX_TMU];
 
-int max_textures[MAX_TMU]; // Maximum number of textures allowed for TMU
+//int max_textures[MAX_TMU]; // Maximum number of textures allowed for TMU
 
-int key;
+//int key;
 
 
 float stop = 2000.0f;
@@ -55,9 +53,9 @@ float camera_speed = 1;
 // float default_camera_yaw   = 180.0f;  // I still don't understand why the camera only looks at +Z
 // float default_camera_pitch = -4.0f;   // at these values
 // float default_camera_roll = 0.0f;   // at these values
-float default_camera_yaw   = 0.0f;  // I still don't understand why the camera only looks at +Z
-float default_camera_pitch = 0.0f;   // at these values
-float default_camera_roll = 0.0f;   // at these values
+// float default_camera_yaw   = 0.0f;  // I still don't understand why the camera only looks at +Z
+// float default_camera_pitch = 0.0f;   // at these values
+// float default_camera_roll = 0.0f;   // at these values
 
 Mesh* someMesh;
 
@@ -92,6 +90,9 @@ float explosion_happens_time_rate = 1.0f;
 Sound synth, upbeat, gunshot, door, explosion;
 
 int game_00_start() {
+
+   
+
    if (load_wav("MUSIC/SYNTH.WAV", &synth) != 0) return -1;
    if (load_wav("MUSIC/UPBEAT.WAV", &upbeat) != 0) return -1;
    if (load_wav("SOUNDS/GUNSHOT.WAV", &gunshot) != 0) return -1;
@@ -102,12 +103,14 @@ int game_00_start() {
    //test_stereo();
    mixer_play_sound_ex(-1, &synth, 1, 0);
 
-   if (LoadTexture(someTextureName, &someTextureSlot, 0) != 0) {
-      printf("Error loading %s\n", someTextureName);
+   //strncpy(testTexture.filename, "TEXTURES\\TEST.3DF", sizeof(testTexture.filename));
+   testTexture.tmu = 0;
+   if (LoadTexture("TEXTURES\\TEST.3DF", &testTexture) != 0) {
+      printf("Error loading %s\n", testTexture.filename);
       return -1;
    }
 
-   // Try to load ship model
+   // Try to load model
    someMesh = LoadMeshFromOBJ(someModelName);
    if (!someMesh) {
       printf("Failed to load mesh %s\n", someModelName);

@@ -163,7 +163,7 @@ void DrawTexturedCubeAt(
     float rot_x,
     float rot_y,
     float rot_z, 
-    TextureSlot* textureSlot
+    Texture* texture
 ) {
     GrState grState;
 
@@ -207,7 +207,7 @@ void DrawTexturedCubeAt(
     // );
     
 
-    if (textureSlot->tmu == 0) {
+    if (texture->tmu == 0) {
         grTexCombine(
             GR_TMU0,
             GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,
@@ -225,7 +225,7 @@ void DrawTexturedCubeAt(
         //     FXFALSE, FXFALSE);
         
     }
-    else if (textureSlot->tmu == 1) {
+    else if (texture->tmu == 1) {
         grTexCombine( // Отключаем TMU0 (выдаёт 0)
             GR_TMU0,
             GR_COMBINE_FUNCTION_ZERO, GR_COMBINE_FACTOR_NONE,
@@ -242,7 +242,7 @@ void DrawTexturedCubeAt(
         //     GR_COMBINE_FUNCTION_ZERO, GR_COMBINE_FACTOR_ZERO,
         //     FXFALSE, FXFALSE);
     }
-    else if (textureSlot->tmu == 2) {
+    else if (texture->tmu == 2) {
         grTexCombine( // Отключаем TMU0 (выдаёт 0)
             GR_TMU0,
             GR_COMBINE_FUNCTION_ZERO, GR_COMBINE_FACTOR_ZERO,
@@ -261,7 +261,7 @@ void DrawTexturedCubeAt(
     }
     else { // Incorrect number of TMU
         grGlideSetState(&grState);
-        printf("[ERROR] Incorrect number of TMU: %d", textureSlot->tmu);
+        printf("[ERROR] Incorrect number of TMU: %d", texture->tmu);
         return;
     }
 
@@ -292,10 +292,10 @@ void DrawTexturedCubeAt(
         GR_BLEND_ONE,
         GR_BLEND_ZERO);*/
     
-    grTexSource(textureSlot->tmu,
-        textureSlot->baseAddr,
+    grTexSource(texture->tmu,
+        texture->baseAddr,
         GR_MIPMAPLEVELMASK_BOTH,
-        &textureSlot->grTexInfo);
+        &texture->grTexInfo);
 
     //grTexMipMapMode(GR_TMU0, GR_MIPMAP_DISABLE, FXFALSE);
     //grTexFilterMode(GR_TMU0, GR_TEXTUREFILTER_BILINEAR, GR_TEXTUREFILTER_BILINEAR);
@@ -359,8 +359,8 @@ void DrawTexturedCubeAt(
         // Если у вас текстурные координаты хранятся в sow/tow 
         // уже в модели в размерах [0.0f, 1.0f] ,
         // то нужно их умножить на ширину и высоту текстуры:
-        vtx[i].tmuvtx[textureSlot->tmu].sow *= vtx[i].oow * (unsigned long)textureSlot->width;   // s/w
-        vtx[i].tmuvtx[textureSlot->tmu].tow *= vtx[i].oow * (unsigned long)textureSlot->height;   // t/w
+        vtx[i].tmuvtx[texture->tmu].sow *= vtx[i].oow * (unsigned long)texture->width;   // s/w
+        vtx[i].tmuvtx[texture->tmu].tow *= vtx[i].oow * (unsigned long)texture->height;   // t/w
         // vtx[i].tmuvtx[0].sow *= oow * textureSlot->width;   // s/w
         // vtx[i].tmuvtx[0].tow *= oow * textureSlot->height;   // t/w
         // vtx[i].tmuvtx[textureSlot->tmu].sow *= (unsigned long)textureSlot->width;   // s/w

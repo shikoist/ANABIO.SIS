@@ -12,10 +12,11 @@
 
 static FxU32 currentTexAddr[3] = {0, 0, 0}; // For each TMU
 
-int LoadTexture(const char* filename, TextureSlot* slot, int tmu)
+int LoadTexture(const char *filename, Texture* texture)
 {
     Gu3dfInfo guInfo;
-
+    int tmu = texture->tmu;
+    
     // currentTexAddr[0] = grTexMinAddress(GR_TMU0); // This is how the font is occupied above
 
     if (tmu < 0 || tmu > 3) {
@@ -25,10 +26,9 @@ int LoadTexture(const char* filename, TextureSlot* slot, int tmu)
 
     memset(&guInfo, 0, sizeof(guInfo));
 
-    strncpy(slot->filename, filename, sizeof(slot->filename)-1);
-    //slot->grInfo.data = NULL;
-    //slot->baseAddr = 0;
-
+    //strncpy(filename, texture->filename, sizeof(texture->filename)-1);
+    
+    
     if (!FileExists(filename))
     {
         printf("[ERROR] File %s is not found\n", filename);
@@ -59,10 +59,10 @@ int LoadTexture(const char* filename, TextureSlot* slot, int tmu)
             grTexMaxAddress(tmu)
             );
     }
-    slot->baseAddr = currentTexAddr[tmu];
+    texture->baseAddr = currentTexAddr[tmu];
     
     
-    slot->mem_required = guInfo.mem_required;
+    texture->mem_required = guInfo.mem_required;
     //slot->grInfo.data = malloc(guInfo.mem_required);
     
     //if (!slot->grInfo.data)
@@ -87,24 +87,25 @@ int LoadTexture(const char* filename, TextureSlot* slot, int tmu)
     //puts("gu3dfLoad OK");
 
     // 4. Filling GrTexInfo
-    slot->grTexInfo.smallLod    = guInfo.header.small_lod;
-    slot->grTexInfo.largeLod    = guInfo.header.large_lod;
-    slot->grTexInfo.aspectRatio = guInfo.header.aspect_ratio;
-    slot->grTexInfo.format      = guInfo.header.format;
-    slot->grTexInfo.data        = guInfo.data; // Pointer to texture data
-    slot->tmu                   = tmu;
-    slot->width                 = guInfo.header.width;
-    slot->height                = guInfo.header.height;
+    texture->grTexInfo.smallLod    = guInfo.header.small_lod;
+    texture->grTexInfo.largeLod    = guInfo.header.large_lod;
+    texture->grTexInfo.aspectRatio = guInfo.header.aspect_ratio;
+    texture->grTexInfo.format      = guInfo.header.format;
+    texture->grTexInfo.data        = guInfo.data; // Pointer to texture data
+    texture->tmu                   = tmu;
+    texture->width                 = guInfo.header.width;
+    texture->height                = guInfo.header.height;
+
+    strncpy(texture->filename, filename, sizeof(filename)-1);
 
     grTexDownloadMipMap(tmu,
         currentTexAddr[tmu],
         GR_MIPMAPLEVELMASK_BOTH,
-        //&slot->grInfo);
-        &slot->grTexInfo);
+        &texture->grTexInfo);
     
     // Freeing host-memory immediately after loading to VRAM
-    free(guInfo.data);
-    guInfo.data = NULL;
+    //free(guInfo.data);
+    //guInfo.data = NULL;
     //free(slot->grInfo.data);
     // slot->grTexInfo.data = NULL;   // no longer used
 

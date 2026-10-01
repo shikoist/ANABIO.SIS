@@ -20,7 +20,7 @@ void generate_base_models();
 void DrawTexturedCubeAt(
     float pos_x, float pos_y, float pos_z,
     float rot_x, float rot_y, float rot_z,
-    TextureSlot* textureSlot
+    Texture *texture
 );
 void DrawWorldGridAndAxes();
 

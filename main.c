@@ -35,6 +35,7 @@
 #include "glideutl.h"
 #include "glide.h"
 #include "SOUND.H"
+#include "GAME_HUB.H"
 #include "GAME_00.H"
 #include "GAME_01.H"
 
@@ -63,7 +64,8 @@ int count = 0;
 
 GrColor_t backColor;
 
-int i, j, k, a, b, c;
+//int i, j, k, a, b, c;
+int i;
 
 Font fpsFont;
 char fpsString[80];
@@ -218,7 +220,7 @@ int main()
       return -1;
    }
 
-   game_00_start();
+   game_hub_start();
    //game_01_start();
 
    // Main rendering loop
@@ -254,7 +256,7 @@ int main()
 
       switch (current_screen) {
          case 0: {
-            if (game_00_update() == -2) {
+            if (game_hub_update() == -2) {
                exit_now = 1;
             };
             break;
@@ -272,11 +274,13 @@ int main()
       DrawTextF(&fpsFont, 320.0f, 8 + 16, COLOR_MAGENTA, "TIME: %.2f", local_time);
       DrawTextF(&fpsFont, 8.0f, 8 + 16*2, COLOR_MAGENTA, 
          "Cam Pos: %.1f %.1f %.1f", camera.pos_x, camera.pos_y,camera.pos_z);
-      DrawTextF(&fpsFont, 8.0f, 8 + 16*3, COLOR_MAGENTA, 
-         "Triangles: %d (%d/sec)", triangles_drawn, triangles_drawn * (int)(1.0f / delta_time));
+         DrawTextF(&fpsFont, 8.0f, 8 + 16*3, COLOR_MAGENTA, 
+         "Cam Rot: %.1f %.1f %.1f", camera.pitch, camera.yaw,camera.roll);
       DrawTextF(&fpsFont, 8.0f, 8 + 16*4, COLOR_MAGENTA, 
+         "Triangles: %d (%d/sec)", triangles_drawn, triangles_drawn * (int)(1.0f / delta_time));
+      DrawTextF(&fpsFont, 8.0f, 8 + 16*5, COLOR_MAGENTA, 
          "irqs: %d | status: %d | read: %d", counter, irq_debug_last_status, irq_debug_read_data);
-      DrawTextF(&fpsFont, 8.0f, 8 + 16*5, COLOR_YELLOW, 
+      DrawTextF(&fpsFont, 8.0f, 8 + 16*6, COLOR_YELLOW, 
          "Mouse: %d | x: %d | y: %d", mouse.visible, mouse.x, mouse.y);
 
       // Mouse?!

@@ -37,20 +37,25 @@ extern float proj[16];
 extern Camera camera;
 extern FrustumPlanes frustum;
 
-void ExtractFrustumPlanes(FrustumPlanes* planes, float* proj_matrix);
-
 void SetupCamera(
     float pos_x, float pos_y, float pos_z,
     float pitch, float yaw, float roll,
     float fov, float aspect,
     float near_clip, float far_clip);
+
+void ExtractFrustumPlanes(FrustumPlanes* planes, float* proj_matrix);
+
 void UpdateMatricesViewProj();
-void UpdateMatricesViewProj();
-void MoveCameraWorld(float move_delta_x, float move_delta_y, float move_delta_z);
+
 void RotateCameraAroundWorld(float rotate_delta_pitch, float rotate_delta_yaw, float rotate_delta_roll);
 void RotateCameraAroundLocal(float pitch_delta, float yaw_delta, float roll_delta);
+void RotateCameraAroundPos(
+    float pos_x, float pos_y, float pos_z,
+    float distance, float angle);
+
+void MoveCameraWorld(float move_delta_x, float move_delta_y, float move_delta_z);
 void MoveCameraLocal(float forwardDelta, float rightDelta, float upDelta);
-void MoveCameraLocal(float forwardDelta, float rightDelta, float upDelta);
-void MoveCameraLocal(float forwardDelta, float rightDelta, float upDelta);
+
+void SetupViewSpaceFrustum(FrustumPlanes* planes, float fov_deg, float aspect, float near_clip, float far_clip);
 
 #endif

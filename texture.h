@@ -11,8 +11,8 @@ typedef struct {
     int            tmu;
     FxU32          width;
     FxU32          height;
-} TextureSlot;
+} Texture;
 
-int LoadTexture(const char* filename, TextureSlot* slot, int tmu);
+int LoadTexture(const char *filename, Texture *texture);
 
 #endif
