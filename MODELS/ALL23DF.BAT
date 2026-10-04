@@ -1,0 +1,1 @@
+RUN4ALL.EXE C:\GLIDE243\BIN\DOS\TEXUS.EXE *.TGA -rn -mn -dn -t rgb565 -o .3df

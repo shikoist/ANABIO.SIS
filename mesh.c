@@ -17,6 +17,7 @@
 #include "mesh.h"
 #include "glide.h"
 
+static GrVertex viewVerts[MAX_VERTICES];
 static GrVertex tempVtx[MAX_VERTICES];
 static GrVertex screen[3]; // Buffer for only one triangle
 int triangles_drawn;
@@ -439,6 +440,16 @@ Mesh* LoadMeshFromOBJ(const char* filename) {
     int counter_v = 0, counter_f = 0, counter_vt = 0, counter_n = 0;
     char line[256];
     int i;
+    int max_final_vertices;
+
+    int counter_pos = 0;
+    int counter_uv  = 0;
+    int counter_nrm = 0;
+    int final_idx = 0;
+
+    float* obj_positions = NULL;   // 3 float on vertex
+    float* obj_uvs       = NULL;   // 2 float on UV
+    float* obj_normals   = NULL;   // 3 float on normal
     
     FILE* f = fopen(filename, "r");
     if (!f) {
@@ -454,37 +465,38 @@ Mesh* LoadMeshFromOBJ(const char* filename) {
     }
     memset(mesh, 0, sizeof(Mesh));
 
+    // Parsing file - first pass, just counting
     while (fgets(line, sizeof(line), f)) {
         line[strcspn(line, "\r\n")] = 0;
         if (line[0] == '#' || line[0] == '\0') continue;
 
-        // Парсинг вертексов - первый проход, просто считаем
-        // Пример строки: "v 1.000000 1.000000 -1.000000"
+        // Example string: "v 1.000000 1.000000 -1.000000"
         if (strncmp(line, "v ", 2) == 0) {
             float x, y, z;
             if (sscanf(line+2, "%f %f %f", &x, &y, &z) == 3) { num_vertices++; }
         }
-        // Парсинг нормалей - первый проход, просто считаем
-        // Пример строки: "vn 0.000000 0.000000 0.11000"
+        // Parsing normals
+        // Example string: "vn 0.000000 0.000000 0.11000"
         else if (strncmp(line, "vn ", 3) == 0) {
             float x, y, z;
             if (sscanf(line+3, "%f %f %f", &x, &y, &z) == 3) { num_normals++; }
         }
-        // Парсинг текстурных координат - первый проход, просто считаем
-        // Пример строки: "vt 0.000000 0.000000"
+        // Parsing texture coordinates
+        // Example string: "vt 0.000000 0.000000"
         else if (strncmp(line, "vt ", 3) == 0) {
             float u, v;
             if (sscanf(line+3, "%f %f", &u, &v) == 2) { num_texture_coordinates++; }
         }
-        // Парсинг фейсов - первый проход, просто считаем
-        // Пример строки: "f 2 3 1" - только если нет UV-координат
-        // Если есть, то
+        // Parsing faces
+        // Example string: "f 2 3 1" - only if no UV coordinates
+        // If there is, then
         // f 4/1 17/2 5/3
-        // 4, 17, 5 — это индексы вершин (из списка v). Они нумеруются с 1.
-        // 1, 2, 3 — это индексы текстурных координат (из списка vt). Они тоже нумеруются с 1.
+        // 4, 17, 5 — these are vertex indices (from list v). The yare numbered from 1.
+        // 1, 2, 3 — these are texture coordinate indices (from the list vt).
+        //  They are also numbered starting from 1.
         else if (strncmp(line, "f ", 2) == 0) {
             int v1, v2, v3, vt1, vt2, vt3, vn1, vn2, vn3;
-            // Пытаемся прочитать тройку вертексов для построения треугольника
+            // Trying to read a triplet of vertices for triangle construction
             if (sscanf(line+2, "%d %d %d",
                     &v1, &v2, &v3) == 3) { num_faces++; }
             else if (sscanf(line+2, "%d/%d %d/%d %d/%d",
@@ -492,275 +504,205 @@ Mesh* LoadMeshFromOBJ(const char* filename) {
             else if (sscanf(line+2, "%d/%d/%d %d/%d/%d %d/%d/%d",
                     &v1, &vt1, &vn1, &v2, &vt2, &vn2, &v3, &vt3, &vn3) == 9) { num_faces++; }
             else {
-                // Не удалось прочитать 9 чисел – пропускаем или сообщаем об ошибке
+                // Failed to read 9 numbers – skip or report error
                 printf("WARNING: unsupported face format: %s\n", line);
             }
         }
     }
     fclose(f);
 
-    printf("[FILE] Preload %s : %d vertices, %d faces, %d texture coords, %d normals\n", 
+    printf("[FILE] Calculating %s : %d vertices, %d faces, %d texture coords, %d normals\n", 
         filename, num_vertices, num_faces, num_texture_coordinates, num_normals);
 
-
-    // Теперь выделяем ровно столько памяти, сколько нужно
-    // Откроем файл ещё раз и заполним массивы
-    // По размеру структуры GrVertex
+    // Now we allocate exactly the memory that is needed
+    // Open the file again and fill the arrays
+    // According to the size of the GrVertex structure
     //mesh->grVertices = malloc(num_vertices * sizeof(GrVertex));
-    mesh->grVertices = malloc((num_vertices * sizeof(GrVertex) + 15) & ~15);
+    //mesh->grVertices = malloc((num_vertices * sizeof(GrVertex) + 15) & ~15);
 
-    // Неужели в этом была причина?!
-    // что код не работал на железке
-    // ... нет
-    // for (i = 0; i < num_verts; i++)
-    // {
-    //     GrVertex *grVertex = mesh->grVertices[i];
-    //     grVertex->tmuvtx = malloc(GLIDE_NUM_TMU * sizeof(GrTmuVertex)); 
-    // }
+    // Now each triangle is a separate entity
+    mesh->grVertices = malloc(num_faces * 3 * sizeof(GrVertex));
 
-    // Инициализируем все вершины
-    for (i = 0; i < num_vertices; i++) {
+    // Allocating memory
+    if (num_vertices > 0)
+        obj_positions = malloc(num_vertices * 3 * sizeof(float));
+    if (num_texture_coordinates > 0)
+        obj_uvs = malloc(num_texture_coordinates * 2 * sizeof(float));
+    if (num_normals > 0)
+        obj_normals = malloc(num_normals * 3 * sizeof(float));
+
+    // Final vertex count = face count * 3
+    max_final_vertices = num_faces * 3;
+
+    // Initialize all vertices
+    for (i = 0; i < max_final_vertices; i++) {
         memset(&mesh->grVertices[i], 0, sizeof(GrVertex));
-        mesh->grVertices[i].oow = 1.0f;  // Важно!
-        // tmuvtx уже встроен в структуру, не нужно выделять отдельно
+        mesh->grVertices[i].oow = 1.0f;  // Important!
+        // tmuvtx is already built into the structure, no need to allocate separately
     }
 
-    // По 3 int на один треугольник
-    mesh->indices_vertices =            malloc(num_faces * 3 * sizeof(int));
-    if (num_normals > 0)
-    {
-        mesh->indices_normals =             malloc(num_faces * 3 * sizeof(int));
-    }
+    // By 3 int for each triangle
+    mesh->indices_vertices = malloc(max_final_vertices * sizeof(int));
+    if (num_normals > 0) mesh->indices_normals = malloc(max_final_vertices * sizeof(int));
+    if (num_texture_coordinates > 0) mesh->indices_texture_coordinates = malloc(max_final_vertices * sizeof(int));
+    if (num_texture_coordinates > 0) mesh->texture_coordinates = malloc(num_texture_coordinates * 2 * sizeof(float));
+    if (num_normals > 0) mesh->normals = malloc(num_normals * 3 * sizeof(float));
 
-    if (num_texture_coordinates > 0)
-    {
-        mesh->indices_texture_coordinates = malloc(num_faces * 3 * sizeof(int));
-    }
-    
-    // По 2 float на одну координату (vt 0.001 0.001)
-    if (num_texture_coordinates > 0)
-    {
-        mesh->texture_coordinates = malloc(num_texture_coordinates * 2 * sizeof(float));
-    }
-
-    // По 3 float на одну нормаль (vn 0.001 0.001 0.001)
-    if (num_normals > 0)
-    {
-        mesh->normals = malloc(num_normals * 3 * sizeof(float));
-    }
-
-    // printf("After many malloc\n");
-    // return mesh;
+    // Second pass - filling arrays
+    counter_pos = 0;
+    counter_uv  = 0;
+    counter_nrm = 0;
+    final_idx = 0;
 
     f = fopen(filename, "r");
     while (fgets(line, sizeof(line), f)) {
         line[strcspn(line, "\r\n")] = 0;
         if (line[0] == '#' || line[0] == '\0') continue;
 
-        // Парсинг вертексов
-        // Пример строки: "v 1.000000 1.000000 -1.000000"
-        if (num_vertices > 0 && strncmp(line, "v ", 2) == 0) {
+        // --- v ---
+        if (strncmp(line, "v ", 2) == 0) {
             float x, y, z;
-            if (sscanf(line+2, "%f %f %f", &x, &y, &z) == 3) {
-                
-                mesh->grVertices[counter_v].r = 1;
-                mesh->grVertices[counter_v].g = 1;
-                mesh->grVertices[counter_v].b = 1;
-                mesh->grVertices[counter_v].a = 1;
-
-                mesh->grVertices[counter_v].oow = 1;
-                mesh->grVertices[counter_v].ooz = 1;
-
-                mesh->grVertices[counter_v].tmuvtx[0].oow = 1;
-                mesh->grVertices[counter_v].tmuvtx[0].sow = 1;
-                mesh->grVertices[counter_v].tmuvtx[0].tow = 1;
-
-                mesh->grVertices[counter_v].tmuvtx[1].oow = 1;
-                mesh->grVertices[counter_v].tmuvtx[1].sow = 1;
-                mesh->grVertices[counter_v].tmuvtx[1].tow = 1;
-
-                mesh->grVertices[counter_v].x = x;
-                mesh->grVertices[counter_v].y = y;
-                mesh->grVertices[counter_v].z = z;
-
-                // printf("File: %f %f %f\n", x, y, z);
-                // printf("Mesh: %f %f %f\n", mesh->grVertices[counter].x,
-                //     mesh->grVertices[counter].y, mesh->grVertices[counter].z);
-
-                counter_v++;
+            if (sscanf(line + 2, "%f %f %f", &x, &y, &z) == 3) {
+                obj_positions[counter_pos * 3 + 0] = x;
+                obj_positions[counter_pos * 3 + 1] = y;
+                obj_positions[counter_pos * 3 + 2] = z;
+                counter_pos++;
             }
         }
-        // Парсинг нормалей - второй проход, заполняем массивы
-        // Пример строки: "vn 0.000000 0.000000 0.11000"
-        else if (num_normals > 0 && strncmp(line, "vn ", 3) == 0) {
+        // --- vn ---
+        else if (strncmp(line, "vn ", 3) == 0) {
             float x, y, z;
-            if (sscanf(line+3, "%f %f %f", &x, &y, &z) == 3) {
-                mesh->normals[counter_n] = x;
-                counter_n++;
-
-                mesh->normals[counter_n] = y;
-                counter_n++;
-
-                mesh->normals[counter_n] = z;
-                counter_n++;
+            if (sscanf(line + 3, "%f %f %f", &x, &y, &z) == 3) {
+                obj_normals[counter_nrm * 3 + 0] = x;
+                obj_normals[counter_nrm * 3 + 1] = y;
+                obj_normals[counter_nrm * 3 + 2] = z;
+                counter_nrm++;
             }
         }
-        // Парсинг текстурных координат
-        // Пример строки: "vt 0.000000 0.000000"
-        else if (num_texture_coordinates > 0 && strncmp(line, "vt ", 3) == 0) {
+        // --- vt ---
+        else if (strncmp(line, "vt ", 3) == 0) {
             float u, v;
-            if (sscanf(line+3, "%f %f", &u, &v) == 2) {
-                mesh->texture_coordinates[counter_vt] = u;
-                counter_vt++;
-
-                mesh->texture_coordinates[counter_vt] = v;
-                counter_vt++;
+            if (sscanf(line + 3, "%f %f", &u, &v) == 2) {
+                obj_uvs[counter_uv * 2 + 0] = u;
+                obj_uvs[counter_uv * 2 + 1] = v;
+                counter_uv++;
             }
         }
-        // Парсинг фейсов
-        // Пример строки: "f 2 3 1" - только если нет UV-координат
-        // Если есть, то
-        // f 4/1 17/2 5/3
-        // 4, 17, 5 — это индексы вершин (из списка v). Они нумеруются с 1.
-        // 1, 2, 3 — это индексы текстурных координат (из списка vt). Они тоже нумеруются с 1.
-        else if (num_faces > 0 && strncmp(line, "f ", 2) == 0) {
-            int v1, v2, v3, vt1, vt2, vt3, vn1, vn2, vn3;
-            // Пытаемся прочитать тройку вертексов для построения треугольника
-            if (sscanf(line+2, "%d %d %d",
-                    &v1, &v2, &v3) == 3)
-            {
-                mesh->indices_vertices[counter_f] = v1 - 1;
-                // printf("Index %d added: %d\n", counter2, mesh->indices[counter2]);
-                counter_f++;
+        // --- f ---
+        else if (strncmp(line, "f ", 2) == 0) {
+            int v1, v2, v3;
+            int vt1, vt2, vt3;
+            int vn1, vn2, vn3;
+            int v_idx[3];
+            int vt_idx[3];
+            int vn_idx[3];
+            int k;
 
-                mesh->indices_vertices[counter_f] = v2 - 1;
-                // printf("Index %d added: %d\n", counter2, mesh->indices[counter2]);
-                counter_f++;
+            int has_uv = 0;
+            int has_n  = 0;
 
-                mesh->indices_vertices[counter_f] = v3 - 1;
-                // printf("Index %d added: %d\n", counter2, mesh->indices[counter2]);
-                counter_f++;
+            // Three possible face formats
+            if (sscanf(line + 2, "%d %d %d", &v1, &v2, &v3) == 3) {
+                // format "f v v v"
+                has_uv = 0;
+                has_n  = 0;
             }
-            else if (sscanf(line+2, "%d/%d %d/%d %d/%d",
-                    &v1, &vt1, &v2, &vt2, &v3, &vt3) == 6)
-            {
-                mesh->indices_vertices[counter_f] = v1 - 1;
-                mesh->indices_texture_coordinates[counter_f] = vt1 - 1;
-                // printf("Index %d added: %d\n", counter2, mesh->indices[counter2]);
-                counter_f++;
-
-                mesh->indices_vertices[counter_f] = v2 - 1;
-                mesh->indices_texture_coordinates[counter_f] = vt2 - 1;
-                // printf("Index %d added: %d\n", counter2, mesh->indices[counter2]);
-                counter_f++;
-
-                mesh->indices_vertices[counter_f] = v3 - 1;
-                mesh->indices_texture_coordinates[counter_f] = vt3 - 1;
-                // printf("Index %d added: %d\n", counter2, mesh->indices[counter2]);
-                counter_f++;
+            else if (sscanf(line + 2, "%d/%d %d/%d %d/%d",
+                            &v1, &vt1, &v2, &vt2, &v3, &vt3) == 6) {
+                // format "f v/vt v/vt v/vt"
+                has_uv = 1;
+                has_n  = 0;
             }
-            else if (sscanf(line+2, "%d/%d/%d %d/%d/%d %d/%d/%d",
-                    &v1, &vt1, &vn1, &v2, &vt2, &vn2, &v3, &vt3, &vn3) == 9)
-            {
-                mesh->indices_vertices[counter_f] = v1 - 1;
-                mesh->indices_normals[counter_f] = vn1 - 1;
-                mesh->indices_texture_coordinates[counter_f] = vt1 - 1;
-                // printf("Index %d added: %d\n", counter2, mesh->indices[counter2]);
-                counter_f++;
-
-                mesh->indices_vertices[counter_f] = v2 - 1;
-                mesh->indices_normals[counter_f] = vn2 - 1;
-                mesh->indices_texture_coordinates[counter_f] = vt2 - 1;
-                // printf("Index %d added: %d\n", counter2, mesh->indices[counter2]);
-                counter_f++;
-
-                mesh->indices_vertices[counter_f] = v3 - 1;
-                mesh->indices_normals[counter_f] = vn3 - 1;
-                mesh->indices_texture_coordinates[counter_f] = vt3 - 1;
-                // printf("Index %d added: %d\n", counter2, mesh->indices[counter2]);
-                counter_f++;
+            else if (sscanf(line + 2, "%d/%d/%d %d/%d/%d %d/%d/%d",
+                            &v1, &vt1, &vn1, &v2, &vt2, &vn2, &v3, &vt3, &vn3) == 9) {
+                // format "f v/vt/vn v/vt/vn v/vt/vn"
+                has_uv = 1;
+                has_n  = 1;
             }
             else {
-                // Не удалось прочитать 9 чисел – пропускаем или сообщаем об ошибке
                 printf("WARNING: unsupported face format: %s\n", line);
+                continue;
+            }
+
+            // Массив из трёх вершин текущего фейса
+            v_idx[0] = v1;
+            v_idx[1] = v2;
+            v_idx[2] = v3;
+            vt_idx[0] = vt1;
+            vt_idx[1] = vt2;
+            vt_idx[2] = vt3;
+            vn_idx[0] = vn1;
+            vn_idx[1] = vn2;
+            vn_idx[2] = vn3;
+
+            for (k = 0; k < 3; k++) {
+                int vi = v_idx[k];
+                GrVertex* nv;
+
+                // Index position check
+                if (vi < 1 || vi > num_vertices) {
+                    printf("WARNING: face references v[%d], but only %d vertices exist\n",
+                        vi, num_vertices);
+                    continue;
+                }
+
+                // Create a new vertex
+                nv = &mesh->grVertices[final_idx];
+                memset(nv, 0, sizeof(GrVertex));
+
+                // --- position ---
+                nv->x = obj_positions[(vi - 1) * 3 + 0];
+                nv->y = obj_positions[(vi - 1) * 3 + 1];
+                nv->z = obj_positions[(vi - 1) * 3 + 2];
+
+                // --- default color ---
+                nv->r = 1.0f;
+                nv->g = 1.0f;
+                nv->b = 1.0f;
+                nv->a = 1.0f;
+
+                // --- W-coordinates ---
+                nv->oow = 1.0f;
+                nv->ooz = 1.0f;
+
+                // --- UV ---
+                if (has_uv) {
+                    int ti = vt_idx[k];
+                    if (ti >= 1 && ti <= num_texture_coordinates) {
+                        float u = obj_uvs[(ti - 1) * 2 + 0];
+                        float v = obj_uvs[(ti - 1) * 2 + 1];
+                        nv->tmuvtx[0].sow = u; // Blender flips UV fix
+                        nv->tmuvtx[0].tow = 1 - v; // still mirrored on axe X
+                        nv->tmuvtx[0].oow = 1.0f;
+                    } else {
+                        printf("WARNING: face references vt[%d], but only %d exist\n",
+                            ti, num_texture_coordinates);
+                    }
+                }
+
+                // --- We write the index in indices_vertices ---
+                mesh->indices_vertices[final_idx] = final_idx;
+                final_idx++;
             }
         }
     }
     fclose(f);
 
-    mesh->num_vertices = num_vertices;
+    mesh->num_vertices = final_idx;
     mesh->num_faces = num_faces;
     mesh->num_texture_coordinates = num_texture_coordinates;
     mesh->num_normals = num_normals;
 
-    // Тут надо обработать массив GrVertex,
-    // чтобы добавить текстурные координаты
-    // Перебор по фейсам, то есть по тройкам
-    if (num_texture_coordinates > 0) {
-        for (i = 0; i < mesh->num_faces * 3; i += 3) {
-            float u, v;
-            int index_tc1, index_tc2, index_tc3;
-            int index_v1, index_v2, index_v3;
+    if (obj_positions) free(obj_positions);
+    if (obj_uvs)       free(obj_uvs);
+    if (obj_normals)   free(obj_normals);
 
-            // Поскольку у нас совпадают индексы indices_vertices и indices_texture_coordinates
-            // то можно так найти искомый вертекс
-            // Индексы текстурных координат
-            index_tc1 = mesh->indices_texture_coordinates[i];
-            index_tc2 = mesh->indices_texture_coordinates[i+1];
-            index_tc3 = mesh->indices_texture_coordinates[i+2];
-
-            // Соответствующие индексы вершин
-            index_v1 = mesh->indices_vertices[i];
-            index_v2 = mesh->indices_vertices[i+1];
-            index_v3 = mesh->indices_vertices[i+2];
-            
-            // Поскольку текстурные координаты идут парами,
-            // то удваиваем
-            
-            // Первая вершина треугольника
-            u = mesh->texture_coordinates[index_tc1 * 2];
-            v = mesh->texture_coordinates[index_tc1 * 2 + 1];
-
-            mesh->grVertices[index_v1].tmuvtx[0].sow = u;
-            mesh->grVertices[index_v1].tmuvtx[0].tow = 1 - v;
-            mesh->grVertices[index_v1].tmuvtx[0].oow = 1.0f;
-
-            // Вторая вершина треугольника
-            u = mesh->texture_coordinates[index_tc2 * 2];
-            v = mesh->texture_coordinates[index_tc2 * 2 + 1];
-
-            mesh->grVertices[index_v2].tmuvtx[0].sow = u;
-            mesh->grVertices[index_v2].tmuvtx[0].tow = 1 - v;
-            mesh->grVertices[index_v2].tmuvtx[0].oow = 1.0f;
-
-            // Третья вершина треугольника
-            u = mesh->texture_coordinates[index_tc3 * 2];
-            v = mesh->texture_coordinates[index_tc3 * 2 + 1];
-
-            mesh->grVertices[index_v3].tmuvtx[0].sow = u;
-            mesh->grVertices[index_v3].tmuvtx[0].tow = 1 - v;
-            mesh->grVertices[index_v3].tmuvtx[0].oow = 1.0f;
-        }
+    if (max_final_vertices > MAX_VERTICES) {
+        printf("ERROR: %s has %d faces (= %d vertices), MAX_VERTICES is %d\n",
+            filename, num_faces, max_final_vertices, MAX_VERTICES);
+        free(mesh);
+        return NULL;
     }
-
-    // Попробуем перебрать по самим вертексам
-    // if (num_texture_coordinates > 0) {
-    //     for (i = 0; i < num_vertices; i++) {
-    //         float u = 0, v = 0;
-    //         int index_tc = 0;
-
-    //         index_tc = mesh->indices_texture_coordinates[i];
-
-    //         u = mesh->texture_coordinates[index_tc * 2];
-    //         v = mesh->texture_coordinates[index_tc * 2 + 1];
-
-    //         mesh->grVertices[i].tmuvtx[0].sow = u;
-    //         mesh->grVertices[i].tmuvtx[0].tow = v;
-    //         mesh->grVertices[i].tmuvtx[0].oow = 1.0f;
-
-    //         //printf("DEBUG vertex %d index tex coord %d u %f v %f\n", i, index_tc, u, v);
-    //     }
-    // }
 
     printf("[FILE] Model %s is loaded: %d vertices, %d faces, %d texture coords, %d normals\n", 
         filename, mesh->num_vertices, mesh->num_faces, mesh->num_texture_coordinates, mesh->num_normals);
@@ -950,7 +892,7 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
     int i, j, t;
     float model[16];
     float mv[16];              // Model * View — БЕЗ проекции
-    GrVertex viewVerts[MAX_VERTICES];   // вершины в view-space
+    //GrVertex viewVerts[MAX_VERTICES];   // вершины в view-space
     GrVertex clipped[24];
     int num_tris;
 
@@ -1087,254 +1029,3 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
 
     grGlideSetState(&grState);
 }
-
-void DrawMeshWithDrop(Mesh* mesh, Texture* texture, float pos_x, float pos_y, float pos_z, float rot_x, float rot_y, float rot_z, float scale_x, float scale_y, float scale_z) {
-    
-    GrState grState;
-    int i, j;
-    float model[16];      // Матрица модели (положение, поворот, масштаб объекта)
-    //float view[16];       // Матрица вида (камера) теперь в camera.c - UpdateView()
-    //float proj[16];       // Матрица проекции теперь в camera.c - UpdateView()
-    float mvp[16];        // Итоговая MVP матрица
-    
-    //GrVertex* tempVtx;
-    //GrVertex screen[3]; // Экранный треугольник
-    //GrVertex* screen;
-    
-    int dropped;
-    int valid;
-
-    if (!mesh || !mesh->grVertices) return;
-   
-    // Копируем состояние и настраиваем текстуру (как в DrawTexturedCubeAt)
-    grGlideGetState(&grState);
-   
-    if (camera.wireframe_mode == 1) {
-        grTexCombine(GR_TMU0, // Используем первый TMU
-            //  GR_COMBINE_FUNCTION_LOCAL, // Использовать тексель из текстуры как локальный цвет
-            //  GR_COMBINE_FACTOR_LOCAL,
-            //  GR_COMBINE_FUNCTION_LOCAL, // Совместить локальный цвет с вершинным
-            //  GR_COMBINE_OTHER_NONE,
-            GR_COMBINE_FUNCTION_ZERO,   // ARG1: игнорируем текстуру
-            GR_COMBINE_FACTOR_ZERO,
-            GR_COMBINE_FUNCTION_ZERO,   // ARG2: игнорируем текстуру
-            GR_COMBINE_OTHER_NONE,
-             FXFALSE, FXFALSE);
-        grColorCombine(
-            // GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_ONE,
-            // GR_COMBINE_LOCAL_CONSTANT, GR_COMBINE_OTHER_ITERATED,
-            GR_COMBINE_FUNCTION_SCALE_OTHER,
-            GR_COMBINE_FACTOR_ONE,
-            GR_COMBINE_LOCAL_NONE,      // Нет локального цвета
-            GR_COMBINE_OTHER_ITERATED,  // Используем вершинный цвет
-            FXFALSE );
-    }
-    else {
-        // Только текстура
-        grTexCombine(
-            GR_TMU0,
-            GR_COMBINE_FUNCTION_LOCAL,
-            GR_COMBINE_FACTOR_NONE,
-            GR_COMBINE_FUNCTION_LOCAL,
-            GR_COMBINE_FACTOR_NONE,
-            FXFALSE, FXFALSE);
-        
-        grColorCombine(
-            GR_COMBINE_FUNCTION_SCALE_OTHER,
-            GR_COMBINE_FACTOR_LOCAL,
-            GR_COMBINE_LOCAL_CONSTANT,
-            GR_COMBINE_OTHER_TEXTURE,
-            FXFALSE );
-        grTexSource(texture->tmu,
-            texture->baseAddr,
-            GR_MIPMAPLEVELMASK_BOTH,
-            &texture->grTexInfo);
-    }
-
-    MatrixIdentity(      model);
-    MatrixEulerRotation( model, rot_x,   rot_y,   rot_z);
-    MatrixTranslation(   model, pos_x,   pos_y,   pos_z);
-    MatrixScale(         model, scale_x, scale_y, scale_z);
-    
-    // Матрица View обрабатывается в UpdateView (camera.c)
-    // MatrixLookAt(view,
-    //     0.0f, 0.0f, 0.0f,      // позиция глаза (камеры)
-    //     0.0f, 0.0f, 50.0f,      // куда смотрит камера
-    //     0.0f, 1.0f, 0.0f);     // направление "вверх"
-
-    // MatrixIdentity(proj);
-    // MatrixProjection(proj,
-    //     camera.fov,          // FOV 60 градусов
-    //     camera.aspect,       // aspect ratio 4:3
-    //     camera.near_clip,    // near plane
-    //     camera.far_clip);    // far plane
-
-    // Проверка на некорректные значения
-    // for (i = 0; i < 16; i++) {
-    //     if (isnan(proj[i]) || isinf(proj[i])) {
-    //         printf("ERROR: Invalid matrix value at index %d\n", i);
-    //         MatrixIdentity(mvp);
-    //         return;
-    //     }
-    // }
-
-    // printf("Camera: %f %f %f %f\n", camera.fov,          // FOV 60 градусов
-    //     camera.aspect,       // aspect ratio 4:3
-    //     camera.near_clip,    // near plane
-    //     camera.far_clip);
-
-    MatrixIdentity(mvp);
-    
-    // Порядок MVP = Model x View x Projection,
-    // потому что в проекте используется порядок Row Major
-    // то есть строки матрицы хранятся последовательно
-    MatrixMultiply(mvp, mvp, model);
-    MatrixMultiply(mvp, mvp, view);
-    MatrixMultiply(mvp, mvp, proj);
-
-    // Проверка на некорректные значения
-    // for (i = 0; i < 16; i++) {
-    //     if (isnan(mvp[i]) || isinf(mvp[i])) {
-    //         printf("ERROR: Invalid matrix value at index %d\n", i);
-    //         MatrixIdentity(mvp);
-    //         return;
-    //     }
-    // }
-
-    // Извлекаем плоскости frustum из матрицы проекции
-    //ExtractFrustumPlanes(&frustum, proj);
-    
-    //ExtractFrustumPlanes(&frustum, view);
-    //ExtractFrustumPlanes(&frustum, mvp);
-    // Near plane: z = near_clip (смотрит в +Z)
-    // frustum.near_plane[0] = 0.0f;
-    // frustum.near_plane[1] = 0.0f;
-    //frustum.near_plane[2] = 1.0f;
-    // //frustum.near_plane[3] = -camera.near_clip;  // например, -0.1f
-    //frustum.near_plane[3] = -1;  // например, -0.1f
-
-    // Far plane: z = far_clip (смотрит в -Z)
-    // frustum.far_plane[0] = 0.0f;
-    // frustum.far_plane[1] = 0.0f;
-    //frustum.far_plane[2] = -1.0f;
-    //frustum.far_plane[2] = 0.0f;
-    // //frustum.far_plane[3] = camera.far_clip;  // например, 100.0f
-    //frustum.far_plane[3] = 20.0f;  // например, 100.0f
-        
-    // Отладочный вывод плоскостей
-    // printf("Near plane: %.3f, %.3f, %.3f, %.3f\n", 
-    //     frustum.near_plane[0], frustum.near_plane[1], 
-    //     frustum.near_plane[2], frustum.near_plane[3]);
-    // printf("Far plane: %.3f, %.3f, %.3f, %.3f\n", 
-    //     frustum.far_plane[0], frustum.far_plane[1], 
-    //     frustum.far_plane[2], frustum.far_plane[3]);
-    // printf("Left plane: %.3f, %.3f, %.3f, %.3f\n", 
-    //     frustum.left_plane[0], frustum.left_plane[1], 
-    //     frustum.left_plane[2], frustum.left_plane[3]);
-    // printf("Right plane: %.3f, %.3f, %.3f, %.3f\n", 
-    //     frustum.right_plane[0], frustum.right_plane[1], 
-    //     frustum.right_plane[2], frustum.right_plane[3]);
-
-    // Crash
-    // Победил краш уменьшением MAX_VERTICES до 512
-    //tempVtx = malloc(mesh->num_vertices * sizeof(GrVertex));
-    // Невыровненные данные приводят к зависанию на реальной железке?..
-    //tempVtx = (GrVertex*)malloc((mesh->num_vertices * sizeof(GrVertex) + 15) & ~15);
-    memcpy(tempVtx, mesh->grVertices, mesh->num_vertices * sizeof(GrVertex));
-
-    //screen = (GrVertex*)malloc((3 * sizeof(GrVertex) + 15) & ~15);
-    
-    // Трансформируем и рисуем
-    for (i = 0; i < mesh->num_vertices; i++) {
-        ApplyMatrix(&tempVtx[i], mvp);
-        
-        // масштабируем текстурные координаты
-        tempVtx[i].tmuvtx[0].sow *= tempVtx[i].oow * (unsigned long)texture->width;
-        tempVtx[i].tmuvtx[0].tow *= tempVtx[i].oow * (unsigned long)texture->height;
-
-        // tempVtx[i].tmuvtx[0].sow = 1.0f;
-        // tempVtx[i].tmuvtx[0].tow = 1.0f;
-        // tempVtx[i].tmuvtx[1].sow = 1.0f;
-        // tempVtx[i].tmuvtx[1].tow = 1.0f;
-
-        // tempVtx[i].tmuvtx[0].sow *= (unsigned long)texture->width;
-        // tempVtx[i].tmuvtx[0].tow *= (unsigned long)texture->height;
-        
-        //VertexToScreen2(&tempVtx[i]);
-    }
-
-    // Рисуем треугольники
-    // Здесь неправильно:
-    // вертексы расположены не по индексам,
-    // а нам нужно итерировать индексы и выбирать нужные вертексы из &tempVtx[i]
-    for (i = 0; i < mesh->num_faces * 3; i+=3) {
-        GrVertex* a = &tempVtx[mesh->indices_vertices[i]];
-        GrVertex* b = &tempVtx[mesh->indices_vertices[i+1]];
-        GrVertex* c = &tempVtx[mesh->indices_vertices[i+2]];
-
-        dropped = DropTriangleByFrustum(
-            a, b, c,
-            &frustum
-        );
-        
-        // Пропускаем треугольники за пределами пространства камеры
-        if (dropped > 0) continue;
-
-        // Преобразуем в экранные координаты
-        for (j = 0; j < 3; j++) {
-            VertexToScreen(&tempVtx[mesh->indices_vertices[i+j]], &screen[j]);
-        }
-        
-        // Проверяем на inf/nan во всех полях вершин
-        // valid = 1;
-        // for (j = 0; j < 3; j++) {
-        //     if (isnan(screen[j].x) || 
-        //         isnan(screen[j].y) || 
-        //         isnan(screen[j].z) ||
-        //         isnan(screen[j].oow) || 
-        //         isnan(screen[j].tmuvtx[0].sow) || 
-        //         isnan(screen[j].tmuvtx[0].tow) ||
-        //         isnan(screen[j].tmuvtx[1].sow) || 
-        //         isnan(screen[j].tmuvtx[1].tow) ||
-        //         isinf(screen[j].x) || 
-        //         isinf(screen[j].y) || 
-        //         isinf(screen[j].z) ||
-        //         isinf(screen[j].oow) || 
-        //         isinf(screen[j].tmuvtx[0].sow) || 
-        //         isinf(screen[j].tmuvtx[0].tow) ||
-        //         isinf(screen[j].tmuvtx[1].sow) || 
-        //         isinf(screen[j].tmuvtx[1].tow)
-        //     ) {
-        //         valid = 0;
-        //         break;
-        //     }
-        // }
-        // if (!valid) continue;
-
-        // Проверяем валидность и рисуем
-        if (screen[0].oow > 0 && screen[1].oow > 0 && screen[2].oow > 0) {
-            if (camera.wireframe_mode == 0) {
-                //guAADrawTriangleWithClip(&screen[0], &screen[1], &screen[2]);
-                grDrawTriangle(&screen[0], &screen[1], &screen[2]);
-                triangles_drawn++;
-            }
-            else {
-                grConstantColorValue(0xFFFFFFFF);   // белый (ABGR)
-
-                grAADrawPoint(&screen[0]);
-                grAADrawPoint(&screen[1]);
-                grAADrawPoint(&screen[2]);
-
-                grAADrawLine(&screen[0], &screen[1]);
-                grAADrawLine(&screen[1], &screen[2]);
-                grAADrawLine(&screen[2], &screen[0]);
-            }
-        }
-    }
-
-    grGlideSetState(&grState);
-
-    //free(tempVtx);
-    //free(screen);
-}
-

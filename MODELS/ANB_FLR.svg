@@ -9,6 +9,9 @@
    id="svg1"
    inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
    sodipodi:docname="ANB_FLR.svg"
+   inkscape:export-filename="ANB_FLR.png"
+   inkscape:export-xdpi="96.000008"
+   inkscape:export-ydpi="96.000008"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -24,7 +27,7 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      inkscape:zoom="1.2899551"
-     inkscape:cx="151.94327"
+     inkscape:cx="151.55566"
      inkscape:cy="120.15922"
      inkscape:window-width="1920"
      inkscape:window-height="974"
@@ -33,7 +36,14 @@
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
   <defs
-     id="defs1" />
+     id="defs1">
+    <rect
+       x="17.054857"
+       y="17.054857"
+       width="217.83704"
+       height="219.38748"
+       id="rect1" />
+  </defs>
   <g
      inkscape:label="Слой 1"
      inkscape:groupmode="layer"
@@ -51,10 +61,25 @@
        cy="127.99999"
        r="78.385864" />
     <circle
-       style="fill:#a4e72f;fill-opacity:1;stroke:none;stroke-width:99.9989;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+       style="fill:#537b0e;fill-opacity:1;stroke:none;stroke-width:99.9989;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
        id="circle2"
        cx="127.99999"
        cy="127.99999"
        r="39.624825" />
+    <text
+       xml:space="preserve"
+       id="text1"
+       style="fill:#a4e72f;text-align:center;font-size:133.33333333px;-inkscape-font-specification:'Comic Sans MS';font-family:'Comic Sans MS';stroke-linecap:round;line-height:1.2;letter-spacing:0px;text-orientation:auto;stroke-width:99.99874016;stroke-linejoin:bevel;paint-order:markers fill stroke;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect1);font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:200px;line-height:1.2;font-family:'Comic Sans MS';-inkscape-font-specification:'Comic Sans MS';text-align:center;letter-spacing:0px;writing-mode:lr-tb;direction:ltr;text-anchor:middle;fill:#2be7b6;fill-opacity:1;stroke-width:99.9987;stroke-linecap:round;stroke-linejoin:bevel;paint-order:markers fill stroke"
+       x="127.13622"
+       y="199.23174"
+       id="text2"><tspan
+         sodipodi:role="line"
+         id="tspan2"
+         x="127.13622"
+         y="199.23174"
+         style="font-size:200px">13</tspan></text>
   </g>
 </svg>

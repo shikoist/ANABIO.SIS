@@ -31,6 +31,5 @@ void InterpolateVertex3D(GrVertex* out, GrVertex* v1, GrVertex* v2, float t);
 Mesh* LoadMeshFromOBJ(const char* filename);
 void UnloadMesh(Mesh* mesh);
 void DrawMeshWithClip(Mesh* mesh, Texture *texture, float pos_x, float pos_y, float pos_z, float rot_x, float rot_y, float rot_z, float scale_x, float scale_y, float scale_z);
-void DrawMeshWithDrop(Mesh* mesh, Texture *texture, float pos_x, float pos_y, float pos_z, float rot_x, float rot_y, float rot_z, float scale_x, float scale_y, float scale_z);
 
 #endif

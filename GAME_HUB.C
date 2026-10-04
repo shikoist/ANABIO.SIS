@@ -23,12 +23,14 @@
 #define TEXTURE_DATA_SIZE  131072
 
 Texture tableTexture;
+Texture cubeTexture;
 Texture floorTexture;
 Texture wallTexture;
 Texture ceilTexture;
 
 int i, j, a, b;
 
+Mesh* cubeMesh;
 Mesh* tableMesh;
 Mesh* floorMesh;
 Mesh* wallMesh;
@@ -38,7 +40,7 @@ Sound synth;
 
 int game_hub_start() {
 
-   //strncpy(tableTexture.filename, "TEXTURES\\ANB_TABLE.3DF", sizeof(tableTexture.filename));
+   cubeTexture.tmu = 0;
    tableTexture.tmu = 0;
    floorTexture.tmu = 0;
    wallTexture.tmu = 0;
@@ -48,6 +50,10 @@ int game_hub_start() {
 
    //mixer_play_sound_ex(-1, &synth, 1, 0);
 
+   if (LoadTexture("MODELS\\CUBEAXIS.3DF", &cubeTexture) != 0) {
+      printf("Error loading %s\n", cubeTexture.filename);
+      return -1;
+   }
    if (LoadTexture("MODELS\\ANB_TABL.3DF", &tableTexture) != 0) {
       printf("Error loading %s\n", tableTexture.filename);
       return -1;
@@ -66,6 +72,13 @@ int game_hub_start() {
    }
 
    // Try to load model
+   cubeMesh = LoadMeshFromOBJ("MODELS\\CUBEAXIS.OBJ");
+   if (!cubeMesh) {
+      printf("Failed to load mesh %s\n", "CUBEAXIS.OBJ");
+      return -1;
+   }
+
+
    tableMesh = LoadMeshFromOBJ("MODELS\\ANB_TABL.OBJ");
    //tableMesh = LoadMeshFromOBJ("MODELS\\CUBE.OBJ");
    if (!tableMesh) {
@@ -153,7 +166,8 @@ int game_hub_update() {
    // with new camera movement and rotation data
    UpdateMatricesViewProj();
 
-   DrawMeshWithDrop(tableMesh, &tableTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
+   //DrawMeshWithClip(cubeMesh, &cubeTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
+   DrawMeshWithClip(tableMesh, &tableTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
    DrawMeshWithClip(floorMesh, &floorTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
    DrawMeshWithClip(wallMesh, &wallTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
    DrawMeshWithClip(ceilMesh, &ceilTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
@@ -164,6 +178,7 @@ int game_hub_update() {
 int game_hub_clear() {
    int i;
 
+   UnloadMesh(cubeMesh);
    UnloadMesh(tableMesh);
    UnloadMesh(floorMesh);
    UnloadMesh(ceilMesh);
