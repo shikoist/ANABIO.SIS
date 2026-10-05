@@ -28,8 +28,8 @@ int LoadFont(const char* filename, Font* font)
     font->baseAddr  = texture.baseAddr;
     font->charW     = 16;
     font->charH     = 16;
-    font->texW      = 256.0f;
-    font->texH      = 256.0f;
+    font->texW      = texture.width;
+    font->texH      = texture.height;
 
     // filling the UV table (exactly as in tlib, but simpler)
     memset(font->fontTable, 0, sizeof(font->fontTable));

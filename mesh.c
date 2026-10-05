@@ -671,8 +671,14 @@ Mesh* LoadMeshFromOBJ(const char* filename) {
                     if (ti >= 1 && ti <= num_texture_coordinates) {
                         float u = obj_uvs[(ti - 1) * 2 + 0];
                         float v = obj_uvs[(ti - 1) * 2 + 1];
-                        nv->tmuvtx[0].sow = u; // Blender flips UV fix
-                        nv->tmuvtx[0].tow = 1 - v; // still mirrored on axe X
+                        // Do not touch THIS vars u and v!
+                        // Just do the UV-unwrap right
+                        // Automatic unwrap in Blender occasionally 
+                        // does the flipping UV
+                        // Use the MODELS\UVTEST.TGA to see mirrors
+                        // in the UV in Blender
+                        nv->tmuvtx[0].sow = u;
+                        nv->tmuvtx[0].tow = v;
                         nv->tmuvtx[0].oow = 1.0f;
                     } else {
                         printf("WARNING: face references vt[%d], but only %d exist\n",
@@ -911,6 +917,15 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
             GR_COMBINE_LOCAL_NONE, GR_COMBINE_OTHER_ITERATED,
             FXFALSE);
     } else {
+        // grTexFilterMode(
+        //     GR_TMU0,
+        //     GR_TEXTUREFILTER_POINT_SAMPLED,
+        //     GR_TEXTUREFILTER_POINT_SAMPLED);
+        grTexFilterMode(
+            GR_TMU0,
+            GR_TEXTUREFILTER_BILINEAR,
+            GR_TEXTUREFILTER_BILINEAR);
+
         grTexCombine(GR_TMU0,
             GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,
             GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,

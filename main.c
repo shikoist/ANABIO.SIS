@@ -70,6 +70,165 @@ int i;
 Font fpsFont;
 char fpsString[80];
 
+// small self-test unit for math, matrix, transformation functions
+void selftest_and_exit(void) {
+    Quaternion q;
+    float vx, vy, vz;
+    float m[16];
+    float a[3], b[3], c[3];
+    int i;
+
+    printf("=== SELFTEST START ===\n\n");
+
+    /* --- 1. Identity quaternion --- */
+    quat_identity(&q);
+    printf("[QUAT] identity = (%.4f %.4f %.4f %.4f)\n", q.x, q.y, q.z, q.w);
+
+    /* --- 2. quat_rotate_vector on identity: should not change vector --- */
+    vx = 1.0f; vy = 0.0f; vz = 0.0f;
+    quat_rotate_vector(&vx, &vy, &vz, &q);
+    printf("[QUAT] identity rotates (1,0,0) -> (%.4f %.4f %.4f)  [expect (1,0,0)]\n",
+           vx, vy, vz);
+
+    vx = 0.0f; vy = 1.0f; vz = 0.0f;
+    quat_rotate_vector(&vx, &vy, &vz, &q);
+    printf("[QUAT] identity rotates (0,1,0) -> (%.4f %.4f %.4f)  [expect (0,1,0)]\n",
+           vx, vy, vz);
+
+    vx = 0.0f; vy = 0.0f; vz = 1.0f;
+    quat_rotate_vector(&vx, &vy, &vz, &q);
+    printf("[QUAT] identity rotates (0,0,1) -> (%.4f %.4f %.4f)  [expect (0,0,1)]\n",
+           vx, vy, vz);
+
+    /* --- 3. Yaw 90 deg around Y: (1,0,0) should go to (0,0,-1) or (0,0,1) --- */
+    quat_from_euler(&q, 0.0f, FASTMATH_HALF_PI, 0.0f);
+    printf("\n[QUAT] yaw 90 deg: q = (%.4f %.4f %.4f %.4f)\n", q.x, q.y, q.z, q.w);
+
+    vx = 1.0f; vy = 0.0f; vz = 0.0f;
+    quat_rotate_vector(&vx, &vy, &vz, &q);
+    printf("[QUAT] rotate (1,0,0) by yaw90 -> (%.4f %.4f %.4f)\n", vx, vy, vz);
+
+    vx = 0.0f; vy = 0.0f; vz = 1.0f;
+    quat_rotate_vector(&vx, &vy, &vz, &q);
+    printf("[QUAT] rotate (0,0,1) by yaw90 -> (%.4f %.4f %.4f)\n", vx, vy, vz);
+
+    /* --- 4. Check that axes remain orthonormal and right-handed --- */
+    /* Use nonzero yaw+pitch to avoid degenerate case */
+    quat_from_euler(&q, 30.0f * DEGTORAD, 40.0f * DEGTORAD, 0.0f);
+
+    a[0] = 1.0f; a[1] = 0.0f; a[2] = 0.0f;   /* right */
+    b[0] = 0.0f; b[1] = 1.0f; b[2] = 0.0f;   /* up */
+    c[0] = 0.0f; c[1] = 0.0f; c[2] = 1.0f;   /* forward */
+
+    quat_rotate_vector(&a[0], &a[1], &a[2], &q);
+    quat_rotate_vector(&b[0], &b[1], &b[2], &q);
+    quat_rotate_vector(&c[0], &c[1], &c[2], &q);
+
+    printf("\n[QUAT] after pitch=30 yaw=40:\n");
+    printf("  right   = (%.4f %.4f %.4f)\n", a[0], a[1], a[2]);
+    printf("  up      = (%.4f %.4f %.4f)\n", b[0], b[1], b[2]);
+    printf("  forward = (%.4f %.4f %.4f)\n", c[0], c[1], c[2]);
+
+    /* Length check */
+    printf("  |right|   = %.4f  [expect 1.0]\n",
+           sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]));
+    printf("  |up|      = %.4f  [expect 1.0]\n",
+           sqrt(b[0]*b[0] + b[1]*b[1] + b[2]*b[2]));
+    printf("  |forward| = %.4f  [expect 1.0]\n",
+           sqrt(c[0]*c[0] + c[1]*c[1] + c[2]*c[2]));
+
+    /* right x up should equal forward (right-handed) or -forward (left-handed).
+       In your engine you assume right x up = forward, which means RIGHT-handed. */
+    {
+        float cx = a[1]*b[2] - a[2]*b[1];
+        float cy = a[2]*b[0] - a[0]*b[2];
+        float cz = a[0]*b[1] - a[1]*b[0];
+        printf("  right x up = (%.4f %.4f %.4f)\n", cx, cy, cz);
+        printf("  forward    = (%.4f %.4f %.4f)\n", c[0], c[1], c[2]);
+        printf("  -> if they match: system is RIGHT-handed\n");
+    }
+
+    /* --- 5. View matrix for identity camera at origin --- */
+    SetupCamera(0, 0, 0, 0, 0, 0, 90, 4.0f/3.0f, 2.0f, 100.0f);
+    UpdateMatricesViewProj();
+
+    printf("\n[VIEW] camera at origin, no rotation\n");
+    for (i = 0; i < 4; i++) {
+        printf("  [%8.4f %8.4f %8.4f %8.4f]\n",
+               view[i*4+0], view[i*4+1], view[i*4+2], view[i*4+3]);
+    }
+    printf("  [expect identity]\n");
+
+    /* --- 6. View matrix for camera at (0, 0, -5) looking at +Z --- */
+    SetupCamera(0, 0, -5, 0, 0, 0, 90, 4.0f/3.0f, 2.0f, 100.0f);
+    UpdateMatricesViewProj();
+
+    printf("\n[VIEW] camera at (0, 0, -5), no rotation\n");
+    for (i = 0; i < 4; i++) {
+        printf("  [%8.4f %8.4f %8.4f %8.4f]\n",
+               view[i*4+0], view[i*4+1], view[i*4+2], view[i*4+3]);
+    }
+    printf("  [expect identity with last row 0 0 +5 1]\n");
+
+    /* --- 7. Projection matrix --- */
+    MatrixIdentity(m);
+    MatrixProjection(m, 90.0f, 4.0f/3.0f, 2.0f, 100.0f);
+
+    printf("\n[PROJ] fov=90, aspect=4/3, near=2, far=100\n");
+    for (i = 0; i < 4; i++) {
+        printf("  [%8.4f %8.4f %8.4f %8.4f]\n",
+               m[i*4+0], m[i*4+1], m[i*4+2], m[i*4+3]);
+    }
+
+    /* --- 8. ApplyMatrix on a known point --- */
+    {
+        GrVertex v;
+        memset(&v, 0, sizeof(v));
+        v.x = 0.0f; v.y = 0.0f; v.z = 5.0f;   /* 5 units in front of camera */
+
+        /* Use simple projection with camera at origin, looking +Z */
+        SetupCamera(0, 0, 0, 0, 0, 0, 90, 4.0f/3.0f, 2.0f, 100.0f);
+        UpdateMatricesViewProj();
+
+        /* First apply view */
+        ApplyMatrix(&v, view);
+        printf("\n[APPLY] point (0,0,5) after view  -> (%.4f %.4f %.4f, oow=%.4f)\n",
+               v.x, v.y, v.z, v.oow);
+        printf("  [expect (0, 0, 5) with oow=1]\n");
+
+        /* Then apply projection */
+        ApplyMatrix(&v, proj);
+        printf("[APPLY] same point after proj -> (%.4f %.4f %.4f, oow=%.4f)\n",
+               v.x, v.y, v.z, v.oow);
+        printf("  [expect x=0, y=0, z between 0 and 1, oow=1/5=0.2]\n");
+
+        /* --- 9. Point to the right (+X) --- */
+        v.x = 1.0f; v.y = 0.0f; v.z = 5.0f; v.oow = 1.0f;
+        SetupCamera(0, 0, 0, 0, 0, 0, 90, 4.0f/3.0f, 2.0f, 100.0f);
+        UpdateMatricesViewProj();
+        ApplyMatrix(&v, view);
+        ApplyMatrix(&v, proj);
+        printf("[APPLY] point (1,0,5) -> (%.4f %.4f %.4f, oow=%.4f)\n",
+               v.x, v.y, v.z, v.oow);
+        printf("  [expect x > 0, y = 0, z between 0 and 1, oow=0.2]\n");
+        printf("  -> if x < 0: engine mirrors X!\n");
+
+        /* --- 10. Point above (+Y) --- */
+        v.x = 0.0f; v.y = 1.0f; v.z = 5.0f; v.oow = 1.0f;
+        SetupCamera(0, 0, 0, 0, 0, 0, 90, 4.0f/3.0f, 2.0f, 100.0f);
+        UpdateMatricesViewProj();
+        ApplyMatrix(&v, view);
+        ApplyMatrix(&v, proj);
+        printf("[APPLY] point (0,1,5) -> (%.4f %.4f %.4f, oow=%.4f)\n",
+               v.x, v.y, v.z, v.oow);
+        printf("  [expect x = 0, y > 0, z between 0 and 1, oow=0.2]\n");
+        printf("  -> if y < 0: engine mirrors Y!\n");
+    }
+
+    printf("\n=== SELFTEST END ===\n");
+    exit(0);
+}
+
 int safe_shutdown() {
 
    //free(tempVtxBuffer);
@@ -124,6 +283,8 @@ int main()
 
    init_fast_math(); puts("init_fast_math()");
    generate_base_models();
+
+   //selftest_and_exit();
 
    f1 = (float)BASE_FREQUENCY;
    f2 = (float)CUSTOM_DIVIDER;

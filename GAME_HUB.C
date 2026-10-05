@@ -159,14 +159,14 @@ int game_hub_update() {
 
    RotateCameraAroundPos(
       0, 2.5f, 0,
-      6.0f, local_time * 10);
+      6.0f, local_time * 20);
    
 
    // Update view and proj matrix
    // with new camera movement and rotation data
    UpdateMatricesViewProj();
 
-   //DrawMeshWithClip(cubeMesh, &cubeTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
+   //DrawMeshWithClip(cubeMesh, &cubeTexture, 2, 1, 0, 0, 0, 0, 1, 1, 1);
    DrawMeshWithClip(tableMesh, &tableTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
    DrawMeshWithClip(floorMesh, &floorTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
    DrawMeshWithClip(wallMesh, &wallTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);

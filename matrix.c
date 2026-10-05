@@ -106,7 +106,7 @@ void MatrixRotationY(float* m, float angle_rad)
     s = fast_sin(angle_rad);
 
     SET_MATRIX_VALUE(r, 0, 0,  c);
-    SET_MATRIX_VALUE(r, 0, 2,  s);
+    SET_MATRIX_VALUE(r, 0, 2, s);
     SET_MATRIX_VALUE(r, 2, 0, -s);
     SET_MATRIX_VALUE(r, 2, 2,  c);
 
