@@ -1,4 +1,4 @@
-Build number: 624
+Build number: 643
 init_fast_math()
 New Timer frequency: 1165.23 Hz
 keyboard_init()
@@ -36,6 +36,11 @@ Found TMUs: 1
 [FILE] Model MODELS\ANB_WALL.OBJ is loaded: 48 vertices, 16 faces, 4 texture coords, 8 normals
 [FILE] Calculating MODELS\ANB_CEIL.OBJ : 4 vertices, 2 faces, 4 texture coords, 1 normals
 [FILE] Model MODELS\ANB_CEIL.OBJ is loaded: 6 vertices, 2 faces, 4 texture coords, 1 normals
+[LIGHT] mode = 2
+[LIGHT] mode = 0
+[LIGHT] mode = 1
+[LIGHT] mode = 2
+[LIGHT] mode = 0
 
 [DPMI] Freed selector 0228
 

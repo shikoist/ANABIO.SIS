@@ -38,6 +38,12 @@ typedef struct {
     float vnx, vny, vnz;
 } Light;
 
+#define LIGHTING_NONE    0   /* only texture */
+#define LIGHTING_FLAT    1   /* illumination, one normal per triangle */
+#define LIGHTING_GOURAUD 2   /* illumination, normal at each vertex */
+
+extern int lighting_mode;
+
 /* Ambient light — added once per triangle regardless of sources. */
 extern float ambient_r;
 extern float ambient_g;
@@ -62,7 +68,7 @@ void update_lights(void);
  *
  * out_r, out_g, out_b - resulting color multipliers, each clamped to [0, 1].
  */
-void calc_triangle_lighting(float nx, float ny, float nz,
+void calc_vertex_lighting(float nx, float ny, float nz,
                             float px, float py, float pz,
                             float* out_r, float* out_g, float* out_b);
 

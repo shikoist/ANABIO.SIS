@@ -6,11 +6,14 @@
  * per triangle via cross product) or Gauraud shading.
  */
 
+ #include <stdio.h>
  #include <math.h>
 
 #include "camera.h"
 #include "light.h"
 #include "matrix.h"   /* for view[] and ApplyMatrix-like transforms */
+
+int lighting_mode = LIGHTING_FLAT;
 
 /* Ambient — a small amount so nothing is ever completely black. */
 float ambient_r = 0.15f;
@@ -86,15 +89,20 @@ void update_lights(void)
             /* Directional light — transform direction only. */
             dir_world_to_view(L->nx, L->ny, L->nz,
                               &L->vnx, &L->vny, &L->vnz);
+            // Debug print
+            // printf("[UPD] L0 world=(%.3f %.3f %.3f) view=(%.3f %.3f %.3f)\n",
+            //     L->nx, L->ny, L->nz, L->vnx, L->vny, L->vnz);
         } else {
             /* Point light — transform position. */
             world_to_view(L->x, L->y, L->z,
                           &L->vx, &L->vy, &L->vz);
         }
     }
+
+    
 }
 
-void calc_triangle_lighting(float nx, float ny, float nz,
+void calc_vertex_lighting(float nx, float ny, float nz,
                             float px, float py, float pz,
                             float* out_r, float* out_g, float* out_b)
 {
@@ -158,7 +166,12 @@ void calc_triangle_lighting(float nx, float ny, float nz,
     if (cg > 1.0f) cg = 1.0f;
     if (cb > 1.0f) cb = 1.0f;
 
-    *out_r = cr;
-    *out_g = cg;
-    *out_b = cb;
+    // Fixing dark image?..
+    // *out_r = cr;
+    // *out_g = cg;
+    // *out_b = cb;
+
+    *out_r = cr * 255.0f;
+    *out_g = cg * 255.0f;
+    *out_b = cb * 255.0f;
 }

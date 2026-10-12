@@ -115,12 +115,19 @@ int game_hub_start() {
 
    /* One directed source — top-right-front. */
    lights[0].x = 0; lights[0].y = 0; lights[0].z = 0;   /* ignored */
-   lights[0].nx = 0.4f; lights[0].ny = -0.8f; lights[0].nz = 0.4f;   /* direction */
+   
+   // This way light looks down
+   lights[0].nx = 0.4f; lights[0].ny = 0.8f; lights[0].nz = 0.4f;   /* direction */
+   
    lights[0].r = 1.0f; lights[0].g = 1.0f; lights[0].b = 1.0f;
    lights[0].intensity = 1.0f;
    lights[0].range = -1.0f;   /* directional */
    lights[0].enabled = 1;
    num_lights = 1;
+
+   ambient_r = 0.15f;
+   ambient_g = 0.15f;
+   ambient_b = 0.15f;
 
    return 1;
 }
@@ -169,6 +176,17 @@ int game_hub_update() {
       key_states_prev[KEY_3] = 0;
    }
 
+   if (key_states[KEY_F7] == 1 && key_states_prev[KEY_F7] == 0) {
+      
+      lighting_mode = (lighting_mode + 1) % 3;
+      printf("[LIGHT] mode = %d\n", lighting_mode);
+
+      key_states_prev[KEY_F7] = 1;
+   }
+   if (key_states[KEY_F7] == 0) {
+      key_states_prev[KEY_F7] = 0;
+   }
+
    RotateCameraAroundPos(
       0, 2.5f, 0,
       6.0f, local_time * 20);
@@ -180,17 +198,10 @@ int game_hub_update() {
 
    update_lights(); 
 
-   if (key_states[KEY_F7]) {
-      DrawMeshWithClip(tableMesh, &tableTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
-      DrawMeshWithClip(floorMesh, &floorTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
-      DrawMeshWithClip(wallMesh, &wallTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
-      DrawMeshWithClip(ceilMesh, &ceilTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
-   } else {
-      DrawMeshWithClipAndLight(tableMesh, &tableTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
-      DrawMeshWithClipAndLight(floorMesh, &floorTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
-      DrawMeshWithClipAndLight(wallMesh, &wallTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
-      DrawMeshWithClipAndLight(ceilMesh, &ceilTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
-   }
+   DrawMesh(tableMesh, &tableTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
+   DrawMesh(floorMesh, &floorTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
+   DrawMesh(wallMesh, &wallTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
+   DrawMesh(ceilMesh, &ceilTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
 
    //DrawMeshWithClip(cubeMesh, &cubeTexture, 2, 1, 0, 0, 0, 0, 1, 1, 1);
    //DrawMeshWithClip(tableMesh, &tableTexture, 0, 0, 0, 0, 0, 0, 1, 1, 1);
