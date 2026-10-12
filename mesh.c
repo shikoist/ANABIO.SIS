@@ -14,8 +14,10 @@
 #include <string.h>
 #include <MATH.H>
 #include "matrix.h"
-#include "mesh.h"
+#include "light.h"
 #include "glide.h"
+
+#include "mesh.h"
 
 static GrVertex viewVerts[MAX_VERTICES];
 static GrVertex tempVtx[MAX_VERTICES];
@@ -893,7 +895,7 @@ void DrawMeshWithClipOld(Mesh* mesh, Texture* texture, float pos_x, float pos_y,
     grGlideSetState(&grState);
 }
 
-void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, float pos_z, float rot_x, float rot_y, float rot_z, float scale_x, float scale_y, float scale_z) {
+void DrawMeshInternal(Mesh* mesh, Texture* texture, float pos_x, float pos_y, float pos_z, float rot_x, float rot_y, float rot_z, float scale_x, float scale_y, float scale_z, int lighting_enabled) {
     GrState grState;
     int i, j, t;
     float model[16];
@@ -930,15 +932,28 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
             GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,
             GR_COMBINE_FUNCTION_LOCAL, GR_COMBINE_FACTOR_NONE,
             FXFALSE, FXFALSE);
-        grColorCombine(
-            GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_LOCAL,
-            GR_COMBINE_LOCAL_CONSTANT, GR_COMBINE_OTHER_TEXTURE,
-            FXFALSE);
+        // grColorCombine(
+        //     GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_LOCAL,
+        //     GR_COMBINE_LOCAL_CONSTANT, GR_COMBINE_OTHER_TEXTURE,
+        //     FXFALSE);
+        if (lighting_enabled) {
+            grColorCombine(
+                GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_LOCAL,
+                GR_COMBINE_LOCAL_ITERATED,        /* multiply the texture color by the vertex color */
+                GR_COMBINE_OTHER_TEXTURE,
+                FXFALSE);
+        } else {
+            grColorCombine(
+                GR_COMBINE_FUNCTION_SCALE_OTHER, GR_COMBINE_FACTOR_LOCAL,
+                GR_COMBINE_LOCAL_CONSTANT, /* only the color of the texture pixel */
+                GR_COMBINE_OTHER_TEXTURE,
+                FXFALSE);
+        }
         grTexSource(texture->tmu, texture->baseAddr,
                     GR_MIPMAPLEVELMASK_BOTH, &texture->grTexInfo);
     }
 
-    // --- матрицы: только Model * View ---
+    // matrices: only Model * View
     MatrixIdentity(model);
     MatrixEulerRotation(model, rot_x, rot_y, rot_z);
     MatrixTranslation(model, pos_x, pos_y, pos_z);
@@ -948,7 +963,7 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
     MatrixMultiply(mv, mv, model);
     MatrixMultiply(mv, mv, view);
 
-    // --- трансформация вершин в view-space ---
+    // transformation of vertices to view-space
     memcpy(viewVerts, mesh->grVertices,
            mesh->num_vertices * sizeof(GrVertex));
 
@@ -960,7 +975,59 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
         viewVerts[i].oow = 1.0f;
     }
 
-    // --- клиппинг и отрисовка ---
+    // Here the lighting occurs
+    if (lighting_enabled) {
+        for (i = 0; i < mesh->num_faces * 3; i += 3) {
+            /* Count the color. */
+            float cr, cg, cb;
+
+            int idx1 = mesh->indices_vertices[i];
+            int idx2 = mesh->indices_vertices[i+1];
+            int idx3 = mesh->indices_vertices[i+2];
+
+            GrVertex* v1 = &viewVerts[idx1];
+            GrVertex* v2 = &viewVerts[idx2];
+            GrVertex* v3 = &viewVerts[idx3];
+
+            /* Two sides of a triangle. */
+            float e1x = v2->x - v1->x;
+            float e1y = v2->y - v1->y;
+            float e1z = v2->z - v1->z;
+
+            float e2x = v3->x - v1->x;
+            float e2y = v3->y - v1->y;
+            float e2z = v3->z - v1->z;
+
+            /* Cross product: normal. */
+            float nx = e1y * e2z - e1z * e2y;
+            float ny = e1z * e2x - e1x * e2z;
+            float nz = e1x * e2y - e1y * e2x;
+
+            /* Normalize. */
+            float len = nx*nx + ny*ny + nz*nz;
+            if (len > 0.000001f) {
+                float inv = 1.0f / (float)sqrt((double)len);
+                nx *= inv;
+                ny *= inv;
+                nz *= inv;
+            } else {
+                /* Degenerate triangle — skip. */
+                continue;
+            }
+
+
+            calc_triangle_lighting(nx, ny, nz,
+                                v1->x, v1->y, v1->z,
+                                &cr, &cg, &cb);
+
+            /* Flat shading: all three vertices get one color. */
+            v1->r = cr; v1->g = cg; v1->b = cb;
+            v2->r = cr; v2->g = cg; v2->b = cb;
+            v3->r = cr; v3->g = cg; v3->b = cb;
+        }
+    }
+
+    // clipping and rendering
     for (i = 0; i < mesh->num_faces * 3; i += 3) {
         int idx1 = mesh->indices_vertices[i];
         int idx2 = mesh->indices_vertices[i+1];
@@ -969,8 +1036,8 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
         GrVertex* v2 = &viewVerts[idx2];
         GrVertex* v3 = &viewVerts[idx3];
         
-        // Быстрый reject: все три вершины за near-плоскостью
-        // (в view-space near_plane имеет нормаль (0,0,1) и d=-near)
+        // Quick reject: all three vertices behind the near-plane
+        // (in view-space near_plane has normal (0,0,1) and d=-near)
         float d1 = eval_plane_value(*v1, frustum.near_plane);
         float d2 = eval_plane_value(*v2, frustum.near_plane);
         float d3 = eval_plane_value(*v3, frustum.near_plane);
@@ -980,7 +1047,7 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
                                          &frustum, 24);
         if (num_tris <= 0) continue;
 
-        // --- отрисовка каждого клипленного треугольника ---
+        // rendering of each clipped triangle
         for (t = 0; t < num_tris; t++) {
             GrVertex* tri = &clipped[t * 3];
             GrVertex screen[3];
@@ -990,7 +1057,7 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
 
                 GrVertex clip;
 
-                // NaN / Inf фильтр ДО любых преобразований
+                // NaN / Inf filter BEFORE any transformations
                 if (!(tri[j].x == tri[j].x) ||   // isnan
                     !(tri[j].y == tri[j].y) ||
                     !(tri[j].z == tri[j].z) ||
@@ -1000,14 +1067,14 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
                     ok = 0; break;
                 }
 
-                // Проекция view-space -> clip-space -> screen
-                // Применяем только projection, потом перспективное деление
+                // Projection view-space -> clip-space -> screen
+                // Apply only projection, then perspective division
                 clip = tri[j];
                 //CopyVertex3D(&clip, &tri[j]);
                 ApplyMatrix(&clip, proj);   // даст x/w, y/w, z/w и oow=1/w
 
-                // Теперь clip.x и clip.y уже поделены на w.
-                // Для Glide нужны экранные координаты + oow для W-буфера.
+                // Now clip.x and clip.y are already divided by w.
+                // For Glide, we need screen coordinates + oow for the W-buffer.
                 screen[j].x    = X_TO_SCREEN(clip.x, SCREEN_WIDTH);
                 screen[j].y    = Y_TO_SCREEN(clip.y, SCREEN_HEIGHT);
                 screen[j].z    = clip.z;
@@ -1018,7 +1085,7 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
                 screen[j].b    = tri[j].b;
                 screen[j].a    = tri[j].a;
 
-                // Текстурные координаты: s/w, t/w, умноженные на размер текстуры
+                // Texture coordinates: s/w, t/w, multiplied by texture size
                 screen[j].tmuvtx[0].sow =
                     tri[j].tmuvtx[0].sow * clip.oow * texture->width;
                 screen[j].tmuvtx[0].tow =
@@ -1043,4 +1110,12 @@ void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, fl
     }
 
     grGlideSetState(&grState);
+}
+
+void DrawMeshWithClip(Mesh* mesh, Texture* texture, float pos_x, float pos_y, float pos_z, float rot_x, float rot_y, float rot_z, float scale_x, float scale_y, float scale_z) {
+    DrawMeshInternal(mesh, texture, pos_x, pos_y, pos_z, rot_x, rot_y, rot_z, scale_x, scale_y, scale_z, 0);   /* lighting off */
+}
+
+void DrawMeshWithClipAndLight(Mesh* mesh, Texture* texture, float pos_x, float pos_y, float pos_z, float rot_x, float rot_y, float rot_z, float scale_x, float scale_y, float scale_z) {
+    DrawMeshInternal(mesh, texture, pos_x, pos_y, pos_z, rot_x, rot_y, rot_z, scale_x, scale_y, scale_z, 1);   /* lighting on */
 }

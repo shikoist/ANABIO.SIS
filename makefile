@@ -2,6 +2,7 @@
 CCOPTS = -mf -5s -zp4 -bt=dos -IC:\WATCOM\H -IC:\GLIDE243\Src\Sst1\include
 
 GLOBOBJS = &
+ LIGHT.OBJ &
  GAME_HUB.OBJ &
  GAME_00.OBJ &
  GAME_01.OBJ &
@@ -29,6 +30,8 @@ MAIN.EXE: $(GLOBOBJS)
 	wcc386 $(CCOPTS) -fo=$[*.obj $[*.c
 
 clean: .SYMBOLIC
+    DEL LIGHT.OBJ
+	DEL LIGHT.ERR
 	DEL GAME_HUB.OBJ
 	DEL GAME_HUB.ERR
 	DEL GAME_00.OBJ
